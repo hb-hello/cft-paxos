@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option java_package = "org.example";
+
+service MessageService {
+  rpc Request (ClientRequest) returns (ClientReply) {};
+
+  rpc Prepare (PrepareRequest) returns (Promise) {};
+  rpc Accept (AcceptRequest) returns (Accepted) {};
+  rpc Commit (CommitRequest) returns (.google.protobuf.Empty) {};
+}
+
+// Client - server connections
+
+// Client to server request
+
+message Transaction {
+  string sender = 1;
+  string receiver = 2;
+  double amount = 3;
+}
+
+message ClientRequest {
+  Transaction transaction = 1;
+  int64 timestamp = 2;
+  string client_id = 3;
+}
+
+// Server to client reply
+
+message ClientReply {
+  string sender_id = 1;
+  int64 timestamp = 2;
+  string client_id = 3;
+  bool result = 4;
+}
+
+// Server - server connections
+
+message Ballot {
+  int32 instance = 1;
+  string sender_id = 2;
+}
+
+// Prepare phase
+message PrepareRequest {
+  Ballot ballot = 1;
+  int32 sequence_number = 2;
+}
+
+message Promise {
+  Ballot ballot = 1;
+  int32 sequence_number = 2;
+  repeated AcceptRequest accept_log = 3;
+  string sender_id = 4;
+  bool promised = 5;
+}
+
+// Accept phase
+message AcceptRequest {
+  Ballot ballot = 1;
+  int32 sequence_number = 2;
+  ClientRequest request = 3;
+}
+
+message Accepted {
+  Ballot ballot = 1;
+  int32 sequence_number = 2;
+  ClientRequest request = 3;
+  bool accepted = 4;
+  string sender_id = 5;
+}
+
+message NewView {
+  Ballot ballot = 1;
+  repeated AcceptRequest accept_log = 2;
+}
+
+// Commit phase
+message CommitRequest {
+  Ballot ballot = 1;
+  int32 sequence_number = 2;
+  ClientRequest request = 3;
+}
