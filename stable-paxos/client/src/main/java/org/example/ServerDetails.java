@@ -1,4 +1,4 @@
 package org.example;
 
-public record ServerDetails(String id, String address, int port) {
+public record ServerDetails(String id, String host, int port) {
 }

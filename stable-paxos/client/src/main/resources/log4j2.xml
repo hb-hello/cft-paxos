@@ -6,7 +6,7 @@
             <PatternLayout pattern="%d{ISO8601} %-5p [%t]: %m%n"/>
         </Console>
 
-        <File name="FILE" fileName="C:/Users/hbiyani/OneDrive - Stony Brook University/Documents/DEV/grpc-java/logs/server/logFile.log">
+        <File name="FILE" fileName="logs/client/logFile.log">
             <PatternLayout pattern="%d{ISO8601} %-5p [%t]: %m%n"/>
         </File>
     </Appenders>

@@ -84,6 +84,11 @@
             <artifactId>jackson-databind</artifactId>
             <version>2.17.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.12.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -109,6 +114,7 @@
                 </executions>
                 <configuration>
 <!--                    <addProtoSources>all</addProtoSources>-->
+                    <protocVersion>3.17.3</protocVersion>
                     <includeMavenTypes>direct</includeMavenTypes>
                     <includeStdTypes>true</includeStdTypes>
                     <protocArtifact>com.google.protobuf:protoc:3.17.3</protocArtifact>
