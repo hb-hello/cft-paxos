@@ -1,36 +1,17 @@
 package org.example;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class TransactionSet {
-    private final int setNumber;
-    // The list now holds the gRPC-defined Transaction objects
-    private final List<MessageServiceOuterClass.Transaction> transactionList;
-    private final List<String> activeNodesList;
-
+/**
+ * @param setNumber Transaction set identifier
+ * @param transactionList List of gRPC-defined Transaction objects in the transaction set
+ * @param activeNodesList List of active nodes for the transaction set
+ */
+public record TransactionSet(int setNumber, List<MessageServiceOuterClass.Transaction> transactionList,
+                             List<String> activeNodesList) {
     public TransactionSet(int setNumber) {
-        this.setNumber = setNumber;
-        this.transactionList = new java.util.ArrayList<>();
-        this.activeNodesList = new java.util.ArrayList<>();
-    }
-
-    public TransactionSet(int setNumber, List<MessageServiceOuterClass.Transaction> transactionList, List<String> activeNodesList) {
-        this.setNumber = setNumber;
-        this.transactionList = transactionList;
-        this.activeNodesList = activeNodesList;
-    }
-
-    // Getters
-    public int getSetNumber() {
-        return setNumber;
-    }
-
-    public List<MessageServiceOuterClass.Transaction> getTransactionList() {
-        return transactionList;
-    }
-
-    public List<String> getActiveNodesList() {
-        return activeNodesList;
+        this(setNumber, new ArrayList<>(), new ArrayList<>());
     }
 
     public void addTransaction(MessageServiceOuterClass.Transaction transaction) {
@@ -43,8 +24,6 @@ public class TransactionSet {
 
     @Override
     public String toString() {
-        return "Set " + setNumber +
-                " | Transactions: " + transactionList.size() +
-                " | Nodes: " + activeNodesList;
+        return "Set " + setNumber + " | Transactions: " + transactionList.size() + " | Nodes: " + activeNodesList;
     }
 }

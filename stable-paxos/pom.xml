@@ -13,6 +13,7 @@
         <module>client</module>
         <module>server</module>
         <module>common</module>
+        <module>cli</module>
     </modules>
 
     <properties>

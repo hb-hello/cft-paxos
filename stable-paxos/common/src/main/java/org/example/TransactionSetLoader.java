@@ -34,12 +34,11 @@ public class TransactionSetLoader {
                 if (transactionSets.containsKey(setNumber)) transactionSet = transactionSets.get(setNumber);
                 else {
                     transactionSet = new TransactionSet(setNumber);
+                    transactionSet.addActiveNodeList(parseNodes(nextLine[2]));
                     transactionSets.put(setNumber, transactionSet);
                 }
 
-
                 transactionSet.addTransaction(parseTransaction(nextLine[1]));
-                transactionSet.addActiveNodeList(parseNodes(nextLine[2]));
             }
 
             return transactionSets;
