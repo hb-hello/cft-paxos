@@ -38,7 +38,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.MessageServer</mainClass>
+                            <mainClass>org.example.Server</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

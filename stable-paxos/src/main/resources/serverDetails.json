@@ -1,7 +1,7 @@
 [
-  { "id": "1", "host": "localhost", "port": 3000 },
-  { "id": "2", "host": "localhost", "port": 3001 },
-  { "id": "3", "host": "localhost", "port": 3002 },
-  { "id": "4", "host": "localhost", "port": 3003 },
-  { "id": "5", "host": "localhost", "port": 3004 }
+  { "id": "n1", "host": "localhost", "port": 3000 },
+  { "id": "n2", "host": "localhost", "port": 3001 },
+  { "id": "n3", "host": "localhost", "port": 3002 },
+  { "id": "n4", "host": "localhost", "port": 3003 },
+  { "id": "n5", "host": "localhost", "port": 3004 }
 ]

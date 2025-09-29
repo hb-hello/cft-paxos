@@ -21,9 +21,9 @@ public class TransactionSetLoader {
 
 //    Load transaction sets from src/main/resources/transactionSets.csv using openCSV
 
-    public static Map<Integer, TransactionSet> loadTransactionSets(String filePath) {
+    public static HashMap<Integer, TransactionSet> loadTransactionSets(String filePath) {
 
-        Map<Integer, TransactionSet> transactionSets = new HashMap<>();
+        HashMap<Integer, TransactionSet> transactionSets = new HashMap<>();
 
         try (CSVReader reader = new CSVReaderBuilder(new FileReader(filePath)).withSkipLines(1).build()) {
             String[] nextLine;
