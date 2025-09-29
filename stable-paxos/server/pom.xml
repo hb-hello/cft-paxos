@@ -38,7 +38,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.Server</mainClass>
+                            <mainClass>org.example.ServerNode</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
