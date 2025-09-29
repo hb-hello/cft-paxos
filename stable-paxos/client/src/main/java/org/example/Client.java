@@ -14,9 +14,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+import static org.example.ConfigLoader.loadServersFromConfig;
+
 public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
-    private final String serverDetailsFilePath;
+    private final String SERVER_DETAILS_FILE_PATH = "src/main/resources/serverDetails.json";
     private final String clientId; // c: self client_id
     private HashMap<String, ServerDetails> servers; // [servers]: Map of all server ids and their connection info
     private String leaderId; // leader: Current leader id
@@ -30,18 +32,16 @@ public class Client {
         this.stubs = new HashMap<>();
         this.servers = new HashMap<>();
         this.leaderId = null;
-        this.serverDetailsFilePath = "src/main/resources/serverDetails.json";
 
         try {
-            this.servers = loadServersFromConfig(serverDetailsFilePath);
+            this.servers = loadServersFromConfig(SERVER_DETAILS_FILE_PATH);
         } catch (Exception e) {
-            logger.error("Client {}: Failed to load server details from default config file {} : {}", clientId, serverDetailsFilePath, e.getMessage());
+            logger.error("Client {}: Failed to load server details from default config file {} : {}", clientId, SERVER_DETAILS_FILE_PATH, e.getMessage());
             throw new RuntimeException(e);
         }
     }
 
     public Client(String clientId, String serverDetailsFilePath) {
-        this.serverDetailsFilePath = serverDetailsFilePath;
         this.clientId = clientId;
         this.channels = new HashMap<>();
         this.stubs = new HashMap<>();
@@ -55,37 +55,6 @@ public class Client {
             throw new RuntimeException(e);
         }
     }
-
-    private HashMap<String, ServerDetails> loadServersFromConfig(String filePath) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        List<ServerDetails> serverList = mapper.readValue(new File(filePath), new TypeReference<>() {
-        });
-        Map<String, ServerDetails> servers = new HashMap<>();
-        for (ServerDetails server : serverList) {
-            servers.put(server.id(), server);
-        }
-        return new HashMap<>(servers);
-    }
-
-    public static String[] loadClientIds(String filePath) {
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            List<ClientDetails> clientList = mapper.readValue(new File(filePath), new TypeReference<>() {
-            });
-            String[] clientIds = new String[clientList.size()];
-            for (int i = 0; i < clientList.size(); i++) {
-                clientIds[i] = clientList.get(i).id();
-            }
-            return clientIds;
-        } catch (Exception e) {
-            logger.error("Failed to load client IDs from config file {} : {}", filePath, e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-//    public String getClientId() {
-//        return clientId;
-//    }
 
     public String getLeaderId() {
         return leaderId;
