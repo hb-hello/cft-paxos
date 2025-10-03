@@ -9,7 +9,24 @@ service MessageService {
 
   rpc Prepare (PrepareRequest) returns (Promise) {};
   rpc Accept (AcceptRequest) returns (Accepted) {};
-  rpc Commit (CommitRequest) returns (.google.protobuf.Empty) {};
+  rpc NewView (NewViewRequest) returns (google.protobuf.Empty) {};
+  rpc Commit (CommitRequest) returns (google.protobuf.Empty) {};
+
+  rpc setActiveFlag (ActiveFlag) returns (Acknowledgement) {};
+
+  rpc sendHeartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  rpc sendCheckpoint(CheckpointMessage) returns (Acknowledgement);
+}
+
+// CLI to server request
+
+message ActiveFlag {
+    bool active_flag = 1;
+}
+
+message Acknowledgement {
+    bool status = 1;
 }
 
 // Client - server connections
@@ -83,4 +100,26 @@ message CommitRequest {
   Ballot ballot = 1;
   int32 sequence_number = 2;
   ClientRequest request = 3;
+}
+
+// For liveness checks
+message HeartbeatRequest {
+  string leader_id = 1;
+  BallotNumber ballot = 2;
+}
+
+message HeartbeatResponse {
+  // Empty response is sufficient
+}
+
+// A map representing the entire state of all bank accounts
+message AccountBalances {
+  map<string, double> balances = 1;
+}
+
+// Message for broadcasting a checkpoint
+message CheckpointMessage {
+  int32 last_sequence_number = 1;
+  string state_digest = 2;          // The SHA-256 hash of the state
+  AccountBalances state = 3;      // The full state itself
 }

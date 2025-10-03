@@ -143,7 +143,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.Main</mainClass>
+                            <mainClass>org.example.CliApp</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

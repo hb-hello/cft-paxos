@@ -14,13 +14,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+import static org.example.ChannelManager.createOrGetChannel;
 import static org.example.ConfigLoader.loadServersFromConfig;
 
 public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
     private final String SERVER_DETAILS_FILE_PATH = "src/main/resources/serverDetails.json";
     private final String clientId; // c: self client_id
-    private HashMap<String, ServerDetails> servers; // [servers]: Map of all server ids and their connection info
+    private Map<String, ServerDetails> servers; // [servers]: Map of all server ids and their connection info
     private String leaderId; // leader: Current leader id
     private final HashMap<String, ManagedChannel> channels; // [channels]: Map of server ids and their gRPC channels
     private final HashMap<String, MessageServiceGrpc.MessageServiceBlockingStub> stubs; // [stubs]: Map of server ids and their gRPC stubs
@@ -71,42 +72,11 @@ public class Client {
         return MessageServiceOuterClass.ClientRequest.newBuilder().setTransaction(transaction).setTimestamp(timestamp).setClientId(transaction.getSender()).build();
     }
 
-//    Channel management methods
-
-    private ManagedChannel createChannel(String serverId) {
-        if (!servers.containsKey(serverId)) {
-            logger.error("Client {}: Server ID {} not found in configuration.", clientId, serverId);
-            throw new RuntimeException();
-        }
-        ServerDetails server = servers.get(serverId);
-        ManagedChannel channel = ManagedChannelBuilder.forAddress(server.host(), server.port()).usePlaintext().build();
-        channels.put(serverId, channel);
-        logger.info("Client {}: Initialized gRPC channel to server {} at {}:{}", clientId, serverId, server.host(), server.port());
-        return channel;
-    }
-
-    private void shutdownChannels() {
-        for (Map.Entry<String, ManagedChannel> entry : channels.entrySet()) {
-            String serverId = entry.getKey();
-            ManagedChannel channel = entry.getValue();
-            if (channel != null && !channel.isShutdown()) {
-                channel.shutdown();
-                logger.info("Client {}: Shutdown gRPC channel to server {}", clientId, serverId);
-            }
-        }
-    }
-
-    private ManagedChannel createOrGetChannel(String serverId) {
-        if (channels.containsKey(serverId)) {
-            return channels.get(serverId);
-        }
-        return createChannel(serverId);
-    }
 
 //    Stub management methods
 
     private MessageServiceGrpc.MessageServiceBlockingStub createStub(String serverId) {
-        ManagedChannel channel = createOrGetChannel(serverId);
+        ManagedChannel channel = createOrGetChannel(serverId, SERVER_DETAILS_FILE_PATH);
         MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
         stubs.put(serverId, stub);
         logger.info("Client {}: Initialized gRPC stub for server {}", clientId, serverId);
@@ -139,6 +109,7 @@ public class Client {
         int attempt = 0;
         while (attempt <= maxRetries) {
             attempt++;
+//            Creating a thread to enforce timeout using future.get
             try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
                 MessageServiceGrpc.MessageServiceBlockingStub stub = createOrGetStub(serverId);
                 logger.info("Client {}: Sending ClientRequest to server {} (attempt {}/{})", clientId, serverId, attempt, maxRetries + 1);
