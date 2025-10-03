@@ -1,25 +1,19 @@
 package org.example;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
 import static org.example.ChannelManager.createOrGetChannel;
-import static org.example.ConfigLoader.loadServersFromConfig;
+import static org.example.Config.getMaxRetries;
 
 public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
-    private final String SERVER_DETAILS_FILE_PATH = "src/main/resources/serverDetails.json";
     private final String clientId; // c: self client_id
     private Map<String, ServerDetails> servers; // [servers]: Map of all server ids and their connection info
     private String leaderId; // leader: Current leader id
@@ -32,27 +26,12 @@ public class Client {
         this.channels = new HashMap<>();
         this.stubs = new HashMap<>();
         this.servers = new HashMap<>();
-        this.leaderId = null;
+        this.leaderId = "n1";
 
         try {
-            this.servers = loadServersFromConfig(SERVER_DETAILS_FILE_PATH);
+            this.servers = Config.getServers();
         } catch (Exception e) {
-            logger.error("Client {}: Failed to load server details from default config file {} : {}", clientId, SERVER_DETAILS_FILE_PATH, e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    public Client(String clientId, String serverDetailsFilePath) {
-        this.clientId = clientId;
-        this.channels = new HashMap<>();
-        this.stubs = new HashMap<>();
-        this.servers = new HashMap<>();
-        this.leaderId = null;
-
-        try {
-            this.servers = loadServersFromConfig(serverDetailsFilePath);
-        } catch (Exception e) {
-            logger.error("Client {}: Failed to load server details from user-provided config file {} : {}", clientId, serverDetailsFilePath, e.getMessage());
+            logger.error("Client {}: Failed to load server details from path defined in config.properties : {}", clientId, e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -76,13 +55,12 @@ public class Client {
 //    Stub management methods
 
     private MessageServiceGrpc.MessageServiceBlockingStub createStub(String serverId) {
-        ManagedChannel channel = createOrGetChannel(serverId, SERVER_DETAILS_FILE_PATH);
+        ManagedChannel channel = createOrGetChannel(serverId);
         MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
         stubs.put(serverId, stub);
         logger.info("Client {}: Initialized gRPC stub for server {}", clientId, serverId);
         return stub;
     }
-
 
     /**
      * @param serverId The target server's ID
@@ -101,12 +79,14 @@ public class Client {
      *
      * @param request       The ClientRequest to send
      * @param serverId      The target server's ID (for logging only)
-     * @param timeoutMillis Timeout in milliseconds to wait for a response
-     * @param maxRetries    Maximum number of retries if no response is received
      * @return The server's response, or null if all retries fail
      */
-    private MessageServiceOuterClass.ClientReply sendClientRequestWithRetry(MessageServiceOuterClass.ClientRequest request, String serverId, long timeoutMillis, int maxRetries) {
+    private MessageServiceOuterClass.ClientReply sendClientRequestWithRetry(MessageServiceOuterClass.ClientRequest request, String serverId) {
+        int maxRetries = Config.getMaxRetries();
+        long timeoutMillis = Config.getClientTimeoutMillis();
+
         int attempt = 0;
+
         while (attempt <= maxRetries) {
             attempt++;
 //            Creating a thread to enforce timeout using future.get
@@ -132,35 +112,38 @@ public class Client {
         return null;
     }
 
-    public void processTransaction(MessageServiceOuterClass.Transaction transaction, long timeoutMillis, int maxRetries) {
+    public void processTransaction(MessageServiceOuterClass.Transaction transaction) {
         MessageServiceOuterClass.ClientRequest request = generateClientRequest(transaction);
         if (leaderId == null) {
-            parseServerReply(broadcastRequest(request, timeoutMillis, maxRetries));
+            parseServerReply(broadcastRequest(request));
         } else {
-            parseServerReply(sendClientRequestWithRetry(request, leaderId, timeoutMillis, maxRetries));
+            parseServerReply(sendClientRequestWithRetry(request, leaderId));
         }
+        logger.info("Client {}: Processed transaction: ({}, {}, {})", clientId, transaction.getSender(), transaction.getReceiver(), transaction.getAmount());
     }
 
     private void parseServerReply(MessageServiceOuterClass.ClientReply reply) {
         if (reply != null) {
-            if (reply.getResult()) logger.info("Client {}: Transaction successful.", clientId);
+            if (reply.getResult()) {
+                logger.info("Client {}: Transaction successful.", clientId);
+                this.leaderId = reply.getSenderId();
+                logger.info("Client {}: Updated leader ID to node {}.", clientId, leaderId);
+            }
             else logger.info("Client {}: Transaction failed.", clientId);
-            this.leaderId = reply.getSenderId();
-            logger.info("Client {}: Updated leader ID to node {}.", clientId, leaderId);
         } else {
             this.leaderId = null;
             logger.error("Client {}: Client received no reply.", clientId);
         }
     }
 
-    private MessageServiceOuterClass.ClientReply broadcastRequest(MessageServiceOuterClass.ClientRequest request, long timeoutMillis, int maxRetries) {
+    private MessageServiceOuterClass.ClientReply broadcastRequest(MessageServiceOuterClass.ClientRequest request) {
 
         int serverCount = servers.size();
 
         try (ExecutorService executor = Executors.newFixedThreadPool(serverCount)) {
             CompletionService<MessageServiceOuterClass.ClientReply> completionService = new ExecutorCompletionService<>(executor);
             for (final String serverId : servers.keySet()) {
-                completionService.submit(new SendRequestCallable(request, serverId, timeoutMillis, maxRetries));
+                completionService.submit(new SendRequestCallable(request, serverId));
             }
 
             for (int i = 0; i < serverCount; i++) {
@@ -187,21 +170,17 @@ public class Client {
 
         MessageServiceOuterClass.ClientRequest request;
         String serverId;
-        long timeoutMillis;
-        int maxRetries;
 
-        public SendRequestCallable(MessageServiceOuterClass.ClientRequest request, String serverId, long timeoutMillis, int maxRetries) {
+        public SendRequestCallable(MessageServiceOuterClass.ClientRequest request, String serverId) {
             this.request = request;
             this.serverId = serverId;
-            this.timeoutMillis = timeoutMillis;
-            this.maxRetries = maxRetries;
         }
 
         @Override
         public MessageServiceOuterClass.ClientReply call() throws Exception {
             try {
                 logger.info("Client {}: Broadcasting request to server {}.", clientId, serverId);
-                return sendClientRequestWithRetry(request, serverId, timeoutMillis, maxRetries);
+                return sendClientRequestWithRetry(request, serverId);
             } catch (Exception e) {
                 logger.error("Client {}: Error broadcasting request to server {} : {}", clientId, serverId, e.getMessage());
             }

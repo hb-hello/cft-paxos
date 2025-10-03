@@ -17,6 +17,8 @@ public class Config {
     private static Map<String, ServerDetails> servers;
     private static Map<String, Double> clientBalances;
     private static String transactionSetsPath;
+    private static long clientTimeoutMillis;
+    private static int maxRetries;
     private static boolean initialized = false;
 
     // Private constructor to prevent instantiation
@@ -45,10 +47,20 @@ public class Config {
                 "src/main/resources/clientDetails.json"
         );
 
-        String customTransactionSetsPath = props.getProperty(
+        transactionSetsPath = props.getProperty(
                 "transactions.sets.path",
                 "src/main/resources/transactionSets.csv"
         );
+
+        clientTimeoutMillis = Long.parseLong(props.getProperty(
+                "client.timeout.millis",
+                "500"
+        ));
+
+        maxRetries = Integer.parseInt(props.getProperty(
+                "max.retries",
+                "src/main/resources/transactionSets.csv"
+        ));
 
         logger.info("Using paths: server.details.path={}, client.details.path={}",
                 serverDetailsPath, clientDetailsPath);
@@ -60,8 +72,6 @@ public class Config {
         logger.info("Loading client details from: {}", clientDetailsPath);
         clientBalances = ConfigLoader.loadClientDetails(clientDetailsPath);
         logger.info("Loaded {} clients", clientBalances.size());
-
-        transactionSetsPath = customTransactionSetsPath;
 
         initialized = true;
         logger.info("Config initialization complete");
@@ -148,6 +158,16 @@ public class Config {
     public static String getTransactionSetsPath() {
         ensureInitialized();
         return transactionSetsPath;
+    }
+
+    public static int getMaxRetries() {
+        ensureInitialized();
+        return maxRetries;
+    }
+
+    public static long getClientTimeoutMillis() {
+        ensureInitialized();
+        return clientTimeoutMillis;
     }
 
     /**

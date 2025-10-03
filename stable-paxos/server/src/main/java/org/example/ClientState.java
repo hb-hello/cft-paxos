@@ -16,19 +16,17 @@ public class ClientState {
     private static final Logger logger = LogManager.getLogger(ClientState.class);
 
     private Map<String, ClientRecord> clientState;
-    private final String serverId;
-    private final String clientDetailsFilePath;   // the JSON file with client IDs and starting bank balances
+    private final String serverId;  // the JSON file with client IDs and starting bank balances
 
-    public ClientState(String serverId, String clientDetailsFilePath) {
+    public ClientState(String serverId) {
         this.clientState = new HashMap<>();
         this.serverId = serverId;
-        this.clientDetailsFilePath = clientDetailsFilePath;
         this.getOrInitialize();
     }
 
     private void initialize() {
         try {
-            Map<String, Double> clientDetails = loadClientDetails(clientDetailsFilePath);
+            Map<String, Double> clientDetails = Config.getClientBalances();
             for (Map.Entry<String, Double> client: clientDetails.entrySet()) {
                 ClientRecord clientRecord = new ClientRecord(client.getKey(), client.getValue());
                 this.clientState.put(client.getKey(), clientRecord);

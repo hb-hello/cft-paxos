@@ -90,7 +90,7 @@ message Accepted {
   string sender_id = 5;
 }
 
-message NewView {
+message NewViewRequest {
   Ballot ballot = 1;
   repeated AcceptRequest accept_log = 2;
 }
@@ -105,7 +105,7 @@ message CommitRequest {
 // For liveness checks
 message HeartbeatRequest {
   string leader_id = 1;
-  BallotNumber ballot = 2;
+  Ballot ballot = 2;
 }
 
 message HeartbeatResponse {
