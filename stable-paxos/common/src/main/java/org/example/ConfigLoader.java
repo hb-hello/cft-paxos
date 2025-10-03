@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class ConfigLoader {
 
-    private static final Logger logger = LogManager.getLogger(ChannelManager.class);
+    private static final Logger logger = LogManager.getLogger(ConfigLoader.class);
 
     public static Map<String, ServerDetails> loadServersFromConfig(String serverDetailsFilePath) {
         try {

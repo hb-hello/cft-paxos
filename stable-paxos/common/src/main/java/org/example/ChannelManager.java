@@ -17,9 +17,9 @@ public class ChannelManager {
 
     //    Channel management methods
 
-    public static ManagedChannel createChannel(String serverId, String serverDetailsFilePath) {
+    public static ManagedChannel createChannel(String serverId) {
 
-        Map<String, ServerDetails> servers = loadServersFromConfig(serverDetailsFilePath);
+        Map<String, ServerDetails> servers = Config.getServers();
 
         if (!servers.containsKey(serverId)) {
             logger.error("Server ID {} not found in configuration while creating GRPC channel.", serverId);
@@ -43,11 +43,11 @@ public class ChannelManager {
         }
     }
 
-    public static ManagedChannel createOrGetChannel(String serverId, String serverDetailsFilePath) {
+    public static ManagedChannel createOrGetChannel(String serverId) {
         if (channels.containsKey(serverId)) {
             return channels.get(serverId);
         }
-        return createChannel(serverId, serverDetailsFilePath);
+        return createChannel(serverId);
     }
 
 }

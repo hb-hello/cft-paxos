@@ -15,24 +15,17 @@ import static org.example.ConfigLoader.loadServersFromConfig;
 public class CliApp {
 
     private static final Logger logger = LogManager.getLogger(CliApp.class);
-    private final String serverDetailsFilePath;
-    private final String clientDetailsFilePath;
-    private final String transactionSetsFilePath;
     private static final long TIMEOUT_MILLIS = 500;
     private static final int MAX_RETRIES = 5;
     private final Map<String, ServerNode> serverNodes;
     private final Map<Integer, TransactionSet> transactionSets;
 
-    public CliApp(String serverDetailsFilePath, String clientDetailsFilePath, String transactionSetsFilePath) {
-        this.serverDetailsFilePath = serverDetailsFilePath;
-        this.clientDetailsFilePath = clientDetailsFilePath;
-        this.transactionSetsFilePath = transactionSetsFilePath;
-
+    public CliApp() {
         this.serverNodes = new HashMap<>();
         initializeAllServers();
 
         try {
-            transactionSets = TransactionSetLoader.loadTransactionSets(transactionSetsFilePath);
+            transactionSets = TransactionSetLoader.loadTransactionSets(Config.getTransactionSetsPath());
         } catch (Exception e) {
             logger.error("Error loading transaction sets: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -41,7 +34,7 @@ public class CliApp {
 
     private void initializeAllServers() {
         try {
-            Map<String, ServerDetails> servers = loadServersFromConfig(serverDetailsFilePath);
+            Map<String, ServerDetails> servers = Config.getServers();
             for (String serverId: servers.keySet()) {
                 serverNodes.put(serverId, new ServerNode(serverId));
             }
@@ -51,9 +44,9 @@ public class CliApp {
         }
     }
 
-    private static void activateServerNode(String serverId, String serverDetailsFilePath) {
+    private static void activateServerNode(String serverId) {
         try {
-            ManagedChannel channel = createOrGetChannel(serverId, serverDetailsFilePath);
+            ManagedChannel channel = createOrGetChannel(serverId);
             MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
             MessageServiceOuterClass.Acknowledgement ack = stub.setActiveFlag(MessageServiceOuterClass.ActiveFlag.newBuilder().setActiveFlag(true).build());
             if (!ack.getStatus()) {
@@ -74,7 +67,9 @@ public class CliApp {
         final String CLIENT_DETAILS_FILE_PATH = "src/main/resources/clientDetails.json";
         final String TRANSACTION_SETS_FILE_PATH = "src/main/resources/transactionSets.csv";
 
-        CliApp cli = new CliApp(SERVER_DETAILS_FILE_PATH, CLIENT_DETAILS_FILE_PATH, TRANSACTION_SETS_FILE_PATH);
+        Config.initialize();
+
+        CliApp cli = new CliApp();
 
             for (int setNumber : cli.transactionSets.keySet()) {
 
@@ -82,7 +77,7 @@ public class CliApp {
 
 //                Activate required nodes
                 for (String serverIdToActivate: transactionSet.activeNodesList()) {
-                    activateServerNode(serverIdToActivate, SERVER_DETAILS_FILE_PATH);
+                    activateServerNode(serverIdToActivate);
                 }
 
 //                try (ExecutorService executor = Executors.newFixedThreadPool(transactionSet.transactions().size())) {
