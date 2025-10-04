@@ -12,8 +12,8 @@ import java.util.Map;
 
 public class StateLoader {
 
-    private static final String FILE_PATH_PREFIX = "src/main/resources/clientState-node-";
-    private static final String FILE_PATH_SUFFIX = ".json";
+    private static final String FILE_PATH_PREFIX = "C:\\Users\\hbiyani\\OneDrive - Stony Brook University\\Documents\\DEV\\cft-hb-hello\\stable-paxos\\data\\server-n";
+    private static final String FILE_PATH_SUFFIX = "-state.json";
 
     public static void saveState(String serverId, Map<String, ClientRecord> clientStates) throws IOException {
         String filePath = FILE_PATH_PREFIX + serverId + FILE_PATH_SUFFIX;

@@ -9,8 +9,6 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.example.ConfigLoader.loadServersFromConfig;
-
 public class ServerNode {
 
     private static final Logger logger = LogManager.getLogger(ServerNode.class);
@@ -21,24 +19,16 @@ public class ServerNode {
     private final String serverId;
     private boolean activeStatus = false;
     private final ClientState clientState;
+//    private final Log log;
 
     public ServerNode(String serverId) {
         this.serverId = serverId;
         this.clientState = new ClientState(serverId);
+        this.servers = Config.getServers();
 
 //        Fetch port from config and create GRPC server
-        try {
-            this.servers = Config.getServers();
-            if (!servers.containsKey(serverId)) {
-                logger.error("Server {} not found in server configuration file", serverId);
-                throw new RuntimeException();
-            }
-            this.port = servers.get(serverId).port();
-            this.server = ServerBuilder.forPort(port).addService(new MessageService(this)).build();
-        } catch (Exception e) {
-            logger.error("Server {} : Failed to load server details from default config file : {}", serverId, e.getMessage());
-            throw new RuntimeException(e);
-        }
+        this.port = Config.getServerPort(serverId);
+        this.server = ServerBuilder.forPort(port).addService(new MessageService(this)).build();
     }
 
     public boolean getActiveStatus() {
