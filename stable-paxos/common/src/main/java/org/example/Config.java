@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 
 public class Config {
@@ -136,6 +137,15 @@ public class Config {
     public static ServerDetails getServer(String serverId) {
         ensureInitialized();
         return servers.get(serverId);
+    }
+
+    public static int getServerPort(String serverId) {
+        ensureInitialized();
+        if (servers.containsKey(serverId)) {
+            return servers.get(serverId).port();
+        } else {
+            throw new NoSuchElementException(("Server ID " + serverId + " not found in config"));
+        }
     }
 
     /**

@@ -43,7 +43,7 @@ public class CliApp {
     private static void activateServers(TransactionSet transactionSet) {
 //        Deactivate all servers
         for (String serverId: Config.getServers().keySet()) {
-            setServerNodeActiveFlag(serverId, true);
+            setServerNodeActiveFlag(serverId, false);
         }
 
 //        Activate required servers based on transaction set
