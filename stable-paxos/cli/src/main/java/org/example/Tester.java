@@ -31,7 +31,7 @@ public class Tester {
 
         String serverId = "n1";
 
-        setServerNodeActiveFlag(serverId, false);
+        setServerNodeActiveFlag(serverId, true);
 
         ManagedChannel channel = ChannelManager.createOrGetChannel(serverId);
         MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
@@ -43,8 +43,8 @@ public class Tester {
         try {
             MessageServiceOuterClass.ClientReply reply = stub.request(request);
             System.out.println(reply);
-        } catch (StatusRuntimeException e) {
-            System.out.println("Stream closed - server not responding.");
+        } catch (Exception e) {
+            System.out.println("Error when communicating with server : " + e.getMessage());
         }
     }
 
