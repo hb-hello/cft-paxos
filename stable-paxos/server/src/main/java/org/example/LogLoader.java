@@ -20,7 +20,7 @@ public class LogLoader {
 
     private static final Logger logger = LogManager.getLogger(LogLoader.class);
     private static final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-    private static final String FILE_PATH_PREFIX = "C:\\Users\\hbiyani\\OneDrive - Stony Brook University\\Documents\\DEV\\cft-hb-hello\\stable-paxos\\data\\server-n";
+    private static final String FILE_PATH_PREFIX = "C:\\Users\\hbiyani\\OneDrive - Stony Brook University\\Documents\\DEV\\cft-hb-hello\\stable-paxos\\data\\server-";
     private static final String FILE_PATH_SUFFIX = "\\server-log.json";
 
     /**
@@ -63,6 +63,10 @@ public class LogLoader {
     public static Map<Long, LogEntry> loadLogEntries(String serverId) {
 
         String filePath = FILE_PATH_PREFIX + serverId + FILE_PATH_SUFFIX;
+
+        if (!new File(filePath).isFile()) {
+            return null;
+        }
 
         try {
             JsonNode rootNode = mapper.readTree(new File(filePath));

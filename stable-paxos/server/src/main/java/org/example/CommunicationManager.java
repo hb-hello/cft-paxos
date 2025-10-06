@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 public class CommunicationManager {
 
@@ -15,12 +16,13 @@ public class CommunicationManager {
 
     private final Server server;
     private final ServerActivityInterceptor interceptor;
-    private final Map<String, ServerDetails> servers;
     private final String serverId;
+    private final Set<String> otherServerIds;
+    private boolean active;
 
     public CommunicationManager(String serverId, MessageService service) {
-        this.servers = Config.getServers();
         this.serverId = serverId;
+        this.otherServerIds = Config.getServerIdsExcept(serverId);
 
 //        for listening / receiving
         this.interceptor = new ServerActivityInterceptor();
@@ -28,6 +30,17 @@ public class CommunicationManager {
                 .addService(service)
                 .intercept(interceptor)
                 .build();
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+        this.interceptor.setActiveFlag(active);
+        if (active) logger.info("Server activated.");
+        else logger.info("Server deactivated.");
+    }
+
+    public boolean isActive() {
+        return active;
     }
 
     private MessageServiceGrpc.MessageServiceBlockingStub createStub(String targetServerId) {
@@ -42,7 +55,7 @@ public class CommunicationManager {
         return createStub(targetServerId).prepare(prepareMessage);
     }
 
-    public void start() {
+    public void startListening() {
         try {
 //        Starts the server on the mentioned port
             this.server.start();
@@ -54,6 +67,7 @@ public class CommunicationManager {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
             logger.error("Server {}: GRPC server interrupted : {}", serverId, e.getMessage());
+            logger.info("GRPC server was shut down.");
             throw new RuntimeException(e);
         }
     }

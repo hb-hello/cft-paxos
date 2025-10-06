@@ -3,10 +3,12 @@ package org.example;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class ServerNode {
 
@@ -20,7 +22,7 @@ public class ServerNode {
 
     private final String serverId;
     private final ServerState state;
-    private final Set<String> serverIds;
+    private final Set<String> otherServerIds;
     private final Timer timerBeforePrepare;
     private final Timer leaderLivenessTimer;
     private final ClientState clientState;
@@ -30,7 +32,7 @@ public class ServerNode {
 
     public ServerNode(String serverId) {
         this.serverId = serverId;
-        this.serverIds = Config.getServerIds();
+        this.otherServerIds = Config.getServerIdsExcept(serverId);
 
 //        set up database and log
         this.clientState = new ClientState(serverId);
@@ -47,6 +49,11 @@ public class ServerNode {
         this.comms = new CommunicationManager(serverId, new MessageService(this));
     }
 
+    public ServerNode(String serverId, boolean active) {
+        this(serverId);
+        comms.setActive(active);
+    }
+
     private long getRandom(long min, long max) {
         Random random = new Random();
         return random.nextLong(max - min + 1) + min;
@@ -60,8 +67,13 @@ public class ServerNode {
         return serverId;
     }
 
+    public void setActive(boolean active) {
+        comms.setActive(active);
+    }
+
     // triggered whenever backup role's timer expires or when leader id is null (on startup)
     public void transitionToCandidate() {
+        logger.info("Transitioning to candidate role");
         state.setRole(Role.CANDIDATE);
         state.setLeaderId(null);
         state.clearPromises();
@@ -70,6 +82,7 @@ public class ServerNode {
 
     //    triggered when promiseQueue collects a majority quorum of promises
     public void transitionToLeader() {
+        logger.info("Transitioning to leader role");
         state.setRole(Role.LEADER);
         state.setLeaderId(serverId);
         timerBeforePrepare.stop();
@@ -78,6 +91,7 @@ public class ServerNode {
 
     //    triggered when a prepare/accept/commit/heartbeat(? -> heartbeat should be treated same as empty accept?) with a higher ballot is received
     public void transitionToBackup(String newLeaderId) {
+        logger.info("Transitioning to backup role");
         state.setRole(Role.BACKUP);
         state.setLeaderId(newLeaderId);
         timerBeforePrepare.stop();
@@ -85,14 +99,14 @@ public class ServerNode {
     }
 
     public void attemptPrepare() {
-        if (state.isCandidate() && !timerBeforePrepare.isRunning() && state.isActive()) {
+        if (state.isCandidate() && !timerBeforePrepare.isRunning() && comms.isActive()) {
             broadcastPrepare();
         }
     }
 
     private void broadcastPrepare() {
         try (ExecutorService executor = Executors.newFixedThreadPool(OTHER_SERVER_COUNT)) {
-            for (String serverId : serverIds) {
+            for (String serverId : otherServerIds) {
                 executor.submit(() -> {
                     MessageServiceOuterClass.PromiseMessage promise = comms.sendPrepare(serverId, state.getBallot());
                     handlePromise(promise);
@@ -135,11 +149,25 @@ public class ServerNode {
     }
 
     public void start() {
-        comms.start();
 
-        if (state.getRole() == null) {
-            transitionToCandidate();
+//        start listening for requests on a separate thread
+        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            executor.submit(comms::startListening);
+
+//            wait for server to start
+            Thread.sleep(150);
+
+            logger.info("Attempting to start activities for role : {}", state.getRole());
+
+            if (state.getRole() == null) {
+                transitionToCandidate();
+            }
+
+        } catch (Exception e) {
+            logger.error("Error in GRPC server : {}", e.getMessage());
+            throw new RuntimeException(e);
         }
+
     }
 
     public void shutdown() {
@@ -155,8 +183,14 @@ public class ServerNode {
             return;
         }
 //        First argument will be server ID
+        ServerNode serverNode;
         String serverId = args[0];
-        ServerNode serverNode = new ServerNode(serverId);
+
+        if (args.length == 1) {
+            serverNode = new ServerNode(serverId);
+        } else {
+            serverNode = new ServerNode(serverId, Boolean.parseBoolean(args[1]));
+        }
         serverNode.start();
     }
 }

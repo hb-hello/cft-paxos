@@ -23,16 +23,14 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
     }
 
     public void setActiveFlag(MessageServiceOuterClass.ActiveFlag request, StreamObserver<MessageServiceOuterClass.Acknowledgement> responseObserver) {
-        serverState.setActive(request.getActiveFlag());
-        if (request.getActiveFlag()) {
-            logger.debug("Server {} activated.", serverNode.getServerId());
-        } else {
-            logger.debug("Server {} deactivated.", serverNode.getServerId());
-        }
+        serverNode.setActive(request.getActiveFlag());
         MessageServiceOuterClass.Acknowledgement ack = MessageServiceOuterClass.Acknowledgement.newBuilder().setStatus(true).build();
         responseObserver.onNext(ack);
         responseObserver.onCompleted();
     }
+
+//    public void prepare(MessageServiceOuterClass.PrepareMessage request, StreamObserver<MessageServiceOuterClass.PromiseMessage> responseObserver) {
+//    }
 
     private MessageServiceOuterClass.ClientReply processClientRequest(MessageServiceOuterClass.ClientRequest request) {
         System.out.println("received something");

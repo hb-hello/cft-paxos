@@ -12,24 +12,14 @@ public class ServerState {
     private AtomicReference<Role> role;
     private final AtomicReference<String> leaderId;
     private final Ballot ballot;
-    private AtomicBoolean active;
     private final LinkedBlockingQueue<MessageServiceOuterClass.PromiseMessage> promiseMessages;
 
     public ServerState(String serverId) {
         this.ballot = new Ballot(1, serverId);
-        this.active = new AtomicBoolean(false);
         this.leaderId = new AtomicReference<>(null);
         this.promiseMessages = new LinkedBlockingQueue<>(10);
 //        always initialize as candidate
         this.role = new AtomicReference<>(null);
-    }
-
-    public void setActive(boolean active) {
-        this.active.set(active);
-    }
-
-    public boolean isActive() {
-        return active.get();
     }
 
     public void setRole(Role role) {

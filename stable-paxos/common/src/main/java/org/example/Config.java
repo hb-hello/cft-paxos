@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Config {
 
@@ -135,6 +136,11 @@ public class Config {
     public static Set<String> getServerIds() {
         ensureInitialized();
         return servers.keySet();
+    }
+
+    public static Set<String> getServerIdsExcept(String serverId) {
+        ensureInitialized();
+        return servers.keySet().stream().filter(server -> !Objects.equals(server, serverId)).collect(Collectors.toSet());
     }
 
     /**
