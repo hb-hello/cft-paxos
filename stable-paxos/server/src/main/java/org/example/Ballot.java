@@ -1,7 +1,8 @@
 package org.example;
 
 public class Ballot {
-    private MessageServiceOuterClass.Ballot protoBallot;
+    private volatile MessageServiceOuterClass.Ballot protoBallot;
+    private final Object lock = new Object();
 
     public Ballot(int term, String serverId) {
         this.protoBallot = MessageServiceOuterClass.Ballot.newBuilder()
@@ -11,51 +12,84 @@ public class Ballot {
     }
 
     public Ballot(Ballot other) {
-        this.protoBallot = other.protoBallot.toBuilder().build();
+        synchronized(other.lock) {
+            this.protoBallot = other.protoBallot.toBuilder().build();
+        }
     }
 
     public int getTerm() {
-        return protoBallot.getInstance();
+        synchronized(lock) {
+            return protoBallot.getInstance();
+        }
     }
 
     public void setTerm(int term) {
-        this.protoBallot = protoBallot.toBuilder()
-                .setInstance(term)
-                .build();
+        synchronized(lock) {
+            this.protoBallot = protoBallot.toBuilder()
+                    .setInstance(term)
+                    .build();
+        }
     }
 
     public String getServerId() {
-        return protoBallot.getSenderId();
+        synchronized(lock) {
+            return protoBallot.getSenderId();
+        }
     }
 
     public void setServerId(String serverId) {
-        this.protoBallot = protoBallot.toBuilder()
-                .setSenderId(serverId)
-                .build();
+        synchronized(lock) {
+            this.protoBallot = protoBallot.toBuilder()
+                    .setSenderId(serverId)
+                    .build();
+        }
     }
 
     public void setBallot(int term, String serverId) {
-        setTerm(term);
-        setServerId(serverId);
-    } // might not need this function
+        synchronized(lock) {
+            this.protoBallot = protoBallot.toBuilder()
+                    .setInstance(term)
+                    .setSenderId(serverId)
+                    .build();
+        }
+    }
 
     public void increment() {
-        setTerm(getTerm() + 1);
+        synchronized(lock) {
+            int currentTerm = protoBallot.getInstance();
+            this.protoBallot = protoBallot.toBuilder()
+                    .setInstance(currentTerm + 1)
+                    .build();
+        }
     }
 
     public boolean isGreaterThan(Ballot other) {
-        if (this.getTerm() != other.getTerm()) {
-            return this.getTerm() > other.getTerm();
+        int thisTerm, otherTerm;
+        String thisServerId, otherServerId;
+
+        synchronized(this.lock) {
+            thisTerm = this.protoBallot.getInstance();
+            thisServerId = this.protoBallot.getSenderId();
         }
-        return this.getServerId().compareTo(other.getServerId()) > 0;
+
+        synchronized(other.lock) {
+            otherTerm = other.protoBallot.getInstance();
+            otherServerId = other.protoBallot.getSenderId();
+        }
+
+        if (thisTerm != otherTerm) {
+            return thisTerm > otherTerm;
+        }
+        return thisServerId.compareTo(otherServerId) > 0;
     }
 
     public MessageServiceOuterClass.Ballot toProtoBallot() {
-        return protoBallot;
+        synchronized(lock) {
+            return protoBallot.toBuilder().build();
+        }
     }
 
     public static Ballot fromProtoBallot(MessageServiceOuterClass.Ballot protoBallot) {
-        Ballot ballot = new Ballot(protoBallot.getInstance(), protoBallot.getSenderId());
-        return ballot;
+        return new Ballot(protoBallot.getInstance(), protoBallot.getSenderId());
     }
 }
