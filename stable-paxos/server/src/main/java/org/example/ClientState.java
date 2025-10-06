@@ -6,15 +6,16 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.example.StateLoader.loadState;
 import static org.example.StateLoader.saveState;
 
 public class ClientState {
 
-//    #TODO: Make this async - does this need to be async? - this should only be accessed in the execute flow and execute should only be sequential - is execute a while loop listener that keeps checking if executeSequenceNumber is committed
-
     private static final Logger logger = LogManager.getLogger(ClientState.class);
+    private final ExecutorService saveExecutor;
 
     private Map<String, StateEntry> clientState;
     private final String serverId;  // the JSON file with client IDs and starting bank balances
@@ -22,6 +23,7 @@ public class ClientState {
     public ClientState(String serverId) {
         this.clientState = new ConcurrentHashMap<>(); // concurrent keeps it thread-safe
         this.serverId = serverId;
+        this.saveExecutor = Executors.newSingleThreadExecutor();
         this.getOrInitialize();
     }
 
@@ -79,8 +81,7 @@ public class ClientState {
 
     public boolean addToBalance(String clientId, double amount) {
         if (clientState.containsKey(clientId)) {
-            double oldBankBalance = clientState.get(clientId).getBankBalance();
-            clientState.get(clientId).setBankBalance(oldBankBalance + amount);
+            clientState.get(clientId).addToBankBalance(amount);
             return true;
         } else {
             logger.error("Client ID not found while adding bank balance");
@@ -90,14 +91,7 @@ public class ClientState {
 
     public boolean subtractFromBalance(String clientId, double amount) {
         if (clientState.containsKey(clientId)) {
-            double oldBankBalance = clientState.get(clientId).getBankBalance();
-            if (amount <= oldBankBalance) {
-                clientState.get(clientId).setBankBalance(oldBankBalance - amount);
-                return true;
-            } else {
-                logger.error("Bank balance is less than amount to be transferred");
-                return false;
-            }
+            return clientState.get(clientId).subtractFromBankBalance(amount);
         } else {
             logger.error("Client ID not found while subtracting bank balance");
             return false;
@@ -107,7 +101,11 @@ public class ClientState {
     public boolean transferBalance(MessageServiceOuterClass.Transaction transaction) {
         boolean deductedFromSender = subtractFromBalance(transaction.getSender(), transaction.getAmount());
         if (deductedFromSender) {
-            return addToBalance(transaction.getReceiver(), transaction.getAmount());
+            boolean success = addToBalance(transaction.getReceiver(), transaction.getAmount());
+            if (success) {
+                saveExecutor.submit(this::save);  // Save after successful transfer
+            }
+            return success;
         } else return false;
     }
 

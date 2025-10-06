@@ -38,7 +38,7 @@ public class ServerActivityInterceptor implements ServerInterceptor {
                 return next.startCall(call, headers);
             } else {
                 // For all other methods, close the call with a 'PERMISSION_DENIED' status.
-                logger.info("Interceptor: Server is inactive. Blocking request for method: {}", fullMethodName);
+                logger.debug("Interceptor: Server is inactive. Blocking request for method: {}", fullMethodName);
 
                 // Do not call `next.startCall()`. This prevents the request from being
                 // processed by the service method, effectively emulating a "silent" server.

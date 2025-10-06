@@ -7,10 +7,11 @@ option java_package = "org.example";
 service MessageService {
   rpc Request (ClientRequest) returns (ClientReply) {};
 
-  rpc Prepare (PrepareRequest) returns (Promise) {};
-  rpc Accept (AcceptRequest) returns (Accepted) {};
-  rpc NewView (NewViewRequest) returns (google.protobuf.Empty) {};
-  rpc Commit (CommitRequest) returns (google.protobuf.Empty) {};
+  rpc Prepare (PrepareMessage) returns (PromiseMessage) {};
+  rpc Accept (AcceptMessage) returns (AcceptedMessage) {};
+  rpc NewView (NewViewMessage) returns (google.protobuf.Empty) {};
+  rpc Accepted (AcceptedMessage) returns (google.protobuf.Empty) {};
+  rpc Commit (CommitMessage) returns (google.protobuf.Empty) {};
 
   rpc setActiveFlag (ActiveFlag) returns (Acknowledgement) {};
 
@@ -62,41 +63,37 @@ message Ballot {
 }
 
 // Prepare phase
-message PrepareRequest {
+message PrepareMessage {
   Ballot ballot = 1;
-  int32 sequence_number = 2;
 }
 
-message Promise {
+message PromiseMessage {
   Ballot ballot = 1;
-  int32 sequence_number = 2;
-  repeated AcceptRequest accept_log = 3;
-  string sender_id = 4;
-  bool promised = 5;
+  repeated AcceptMessage accept_log = 2;
+  string sender_id = 3;
 }
 
 // Accept phase
-message AcceptRequest {
+message AcceptMessage {
   Ballot ballot = 1;
   int32 sequence_number = 2;
   ClientRequest request = 3;
 }
 
-message Accepted {
+message AcceptedMessage {
   Ballot ballot = 1;
   int32 sequence_number = 2;
   ClientRequest request = 3;
-  bool accepted = 4;
-  string sender_id = 5;
+  string sender_id = 4;
 }
 
-message NewViewRequest {
+message NewViewMessage {
   Ballot ballot = 1;
-  repeated AcceptRequest accept_log = 2;
+  repeated AcceptMessage accept_log = 2;
 }
 
 // Commit phase
-message CommitRequest {
+message CommitMessage {
   Ballot ballot = 1;
   int32 sequence_number = 2;
   ClientRequest request = 3;

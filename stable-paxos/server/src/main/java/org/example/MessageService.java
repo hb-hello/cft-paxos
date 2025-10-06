@@ -8,9 +8,11 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
 
     private static final Logger logger = LogManager.getLogger(MessageService.class);
     private final ServerNode serverNode;
+    private final ServerState serverState;
 
     public MessageService(ServerNode serverNode) {
         this.serverNode = serverNode;
+        this.serverState = serverNode.getState();
     }
 
     //        Output of the RPC executed on the server is added to the StreamObserver passed
@@ -21,11 +23,11 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
     }
 
     public void setActiveFlag(MessageServiceOuterClass.ActiveFlag request, StreamObserver<MessageServiceOuterClass.Acknowledgement> responseObserver) {
-        serverNode.setActive(request.getActiveFlag());
+        serverState.setActive(request.getActiveFlag());
         if (request.getActiveFlag()) {
-            logger.info("Server {} activated.", serverNode.getServerId());
+            logger.debug("Server {} activated.", serverNode.getServerId());
         } else {
-            logger.info("Server {} deactivated.", serverNode.getServerId());
+            logger.debug("Server {} deactivated.", serverNode.getServerId());
         }
         MessageServiceOuterClass.Acknowledgement ack = MessageServiceOuterClass.Acknowledgement.newBuilder().setStatus(true).build();
         responseObserver.onNext(ack);
@@ -38,7 +40,7 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
             // don't add anything to log
             // check if reply is cached in replyCache and send that in response
         } else {
-            if (serverNode.isBackup()) {
+            if (serverState.isBackup()) {
                 //forward the request to leader
             } else {
                 serverNode.addToLog(request); // maybe call it addToLogAndReplicate?

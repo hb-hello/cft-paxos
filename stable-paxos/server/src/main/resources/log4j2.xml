@@ -20,7 +20,7 @@
 
     <Loggers>
         <Logger name="org.example" level="INFO"/>
-        <Root level="INFO">
+        <Root level="DEBUG">
             <AppenderRef ref="CONSOLE"/>
             <AppenderRef ref="FILE"/>
         </Root>

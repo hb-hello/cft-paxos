@@ -6,9 +6,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Properties;
+import java.util.*;
 
 public class Config {
 
@@ -129,6 +127,14 @@ public class Config {
     public static Map<String, ServerDetails> getServers() {
         ensureInitialized();
         return servers;
+    }
+
+    /**
+     * Get all server IDs
+     */
+    public static Set<String> getServerIds() {
+        ensureInitialized();
+        return servers.keySet();
     }
 
     /**

@@ -44,7 +44,7 @@ public class Log {
         }
     }
 
-    private void saveLog() {
+    private void save() {
         try {
             long currentSeq = sequenceNumber.get();
             long lastSaved = lastSavedSequenceNumber.get();
@@ -53,7 +53,7 @@ public class Log {
                 Map<Long, LogEntry> snapshot = new HashMap<>(log);
                 LogLoader.saveLogEntries(serverId, snapshot);
                 lastSavedSequenceNumber.set(currentSeq);
-                logger.info("Saved log up to sequence: {}", currentSeq);
+                logger.debug("Saved log up to sequence: {}", currentSeq);
             }
         } catch (Exception e) {
             logger.error("Error during log save: {}", e.getMessage());
@@ -75,7 +75,7 @@ public class Log {
         log.put(seqNum, logEntry);
 
 //        trigger async save
-        this.saveExecutor.submit(this::saveLog);
+        this.saveExecutor.submit(this::save);
         return seqNum;
     }
 

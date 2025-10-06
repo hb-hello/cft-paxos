@@ -1,5 +1,7 @@
 package org.example;
 
+import java.util.Objects;
+
 public class Ballot {
     private volatile MessageServiceOuterClass.Ballot protoBallot;
     private final Object lock = new Object();
