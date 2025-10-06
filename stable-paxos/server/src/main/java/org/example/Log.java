@@ -53,7 +53,7 @@ public class Log {
                 Map<Long, LogEntry> snapshot = new HashMap<>(log);
                 LogLoader.saveLogEntries(serverId, snapshot);
                 lastSavedSequenceNumber.set(currentSeq);
-                logger.debug("Saved log up to sequence: {}", currentSeq);
+                logger.info("Saved log up to sequence: {}", currentSeq);
             }
         } catch (Exception e) {
             logger.error("Error during log save: {}", e.getMessage());

@@ -50,7 +50,7 @@ public class LogLoader {
             }
 
             mapper.writeValue(new File(filePath), jsonArray);
-            logger.debug("Successfully saved {} log entries to {}", logEntries.size(), filePath);
+            logger.info("Successfully saved {} log entries to {}", logEntries.size(), filePath);
         } catch (IOException e) {
             logger.error("Failed to save log entries to file {}: {}", filePath, e.getMessage());
             throw new RuntimeException("Failed to save log entries", e);
@@ -87,7 +87,7 @@ public class LogLoader {
                 logEntries.put(sequenceNumber, new LogEntry(sequenceNumber, acceptedVotes, status, builder.build()));
             }
 
-            logger.debug("Server {} : Successfully loaded {} log entries from {}", serverId, logEntries.size(), filePath);
+            logger.info("Server {} : Successfully loaded {} log entries from {}", serverId, logEntries.size(), filePath);
             return logEntries;
         } catch (IOException e) {
             logger.error("Server {} : Failed to load log entries from file {}: {}", serverId, filePath, e.getMessage());

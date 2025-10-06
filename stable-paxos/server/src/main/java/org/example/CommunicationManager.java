@@ -36,7 +36,7 @@ public class CommunicationManager {
     }
 
     public MessageServiceOuterClass.PromiseMessage sendPrepare(String targetServerId, Ballot ballot) {
-        logger.info("<PREPARE, <{}, {}>> sent to server {}", ballot.getTerm(), ballot.getServerId(), targetServerId);
+        logger.info("MESSAGE: <PREPARE, <{}, {}>> sent to server {}", ballot.getTerm(), ballot.getServerId(), targetServerId);
         MessageServiceOuterClass.Ballot protoBallot = ballot.toProtoBallot();
         MessageServiceOuterClass.PrepareMessage prepareMessage = MessageServiceOuterClass.PrepareMessage.newBuilder().setBallot(protoBallot).build();
         return createStub(targetServerId).prepare(prepareMessage);
@@ -46,7 +46,7 @@ public class CommunicationManager {
         try {
 //        Starts the server on the mentioned port
             this.server.start();
-            logger.debug("Server {} started, listening on port {}.", serverId, Config.getServerPort(serverId));
+            logger.info("Server {} started, listening on port {}.", serverId, Config.getServerPort(serverId));
 //        Keeps the server on till terminated
             this.server.awaitTermination();
         } catch (IOException e) {
