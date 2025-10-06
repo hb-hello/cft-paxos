@@ -1,144 +1,122 @@
 package org.example;
 
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
-import io.grpc.stub.StreamObserver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ServerNode {
 
     private static final Logger logger = LogManager.getLogger(ServerNode.class);
 
-    private final ServerActivityInterceptor interceptor;
-    private final Server server;
-
     private final int MAJORITY_COUNT = 2;
-    private final Map<String, ServerDetails> servers;
-    private final int port;
+    private final int OTHER_SERVER_COUNT = 4;
+    private final long WAIT_BEFORE_PREPARE_MIN_MILLIS = 200;
+    private final long WAIT_BEFORE_PREPARE_MAX_MILLIS = 300;
+    private final long LEADER_LIVENESS_TIMEOUT_MILLIS = 500;
+
     private final String serverId;
-    private boolean active;
+    private final ServerState state;
+    private final Set<String> serverIds;
+    private final Timer timerBeforePrepare;
+    private final Timer leaderLivenessTimer;
     private final ClientState clientState;
     private final Log log;
-    private Role role;
-    private String leaderId;
-    private MessageServiceOuterClass.Ballot ballot; // make a separate class? 3 methods are needed - increment, update and isGreaterThan
-    private final List<MessageServiceOuterClass.Promise> promisesReceived;
-    private boolean waitBeforePrepare;
+
+    private final CommunicationManager comms;
 
     public ServerNode(String serverId) {
         this.serverId = serverId;
+        this.serverIds = Config.getServerIds();
+
+//        set up database and log
         this.clientState = new ClientState(serverId);
-        this.servers = Config.getServers();
         this.log = new Log(serverId);
-        this.interceptor = new ServerActivityInterceptor();
-        this.active = false;
-        this.leaderId = null; // initialize leader from persisted server state?
-        this.promisesReceived = new ArrayList<>();
 
-//        Fetch port from config and create GRPC server
-        this.port = Config.getServerPort(serverId);
-        this.server = ServerBuilder.forPort(port).addService(new MessageService(this)).intercept(interceptor) // Interceptor to stop incoming requests when inactive
-                .build();
+//        set up server state - includes log and ballot
+        this.state = new ServerState(serverId);
 
-        // initializeRole -> if leader id is null then becomeCandidate
+//        set up timers
+        this.timerBeforePrepare = new Timer(getRandom(WAIT_BEFORE_PREPARE_MIN_MILLIS, WAIT_BEFORE_PREPARE_MAX_MILLIS), this::attemptPrepare);
+        this.leaderLivenessTimer = new Timer(LEADER_LIVENESS_TIMEOUT_MILLIS, this::transitionToCandidate);
+
+//        set up GRPC communications with other servers and clients
+        this.comms = new CommunicationManager(serverId, new MessageService(this));
     }
 
-    public boolean getActive() {
-        return active;
+    private long getRandom(long min, long max) {
+        Random random = new Random();
+        return random.nextLong(max - min + 1) + min;
     }
 
-    public void setActive(boolean active) {
-        this.active = active; // Governs sending of RPCs
-        this.interceptor.setActiveFlag(active);
+    public ServerState getState() {
+        return state;
     }
 
     public String getServerId() {
         return serverId;
     }
 
-    private static class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
-        private static final Logger logger = LogManager.getLogger(MessageService.class);
-        private final ServerNode serverNode;
-
-        public MessageService(ServerNode serverNode) {
-            this.serverNode = serverNode;
-        }
-
-        //        Output of the RPC executed on the server is added to the StreamObserver passed
-        @Override
-        public void request(MessageServiceOuterClass.ClientRequest request, StreamObserver<MessageServiceOuterClass.ClientReply> responseObserver) {
-            responseObserver.onNext(processClientRequest(request));
-            responseObserver.onCompleted();
-        }
-
-        public void setActiveFlag(MessageServiceOuterClass.ActiveFlag request, StreamObserver<MessageServiceOuterClass.Acknowledgement> responseObserver) {
-            serverNode.setActive(request.getActiveFlag());
-            if (request.getActiveFlag()) {
-                logger.info("Server {} activated.", serverNode.getServerId());
-            } else {
-                logger.info("Server {} deactivated.", serverNode.getServerId());
-            }
-            MessageServiceOuterClass.Acknowledgement ack = MessageServiceOuterClass.Acknowledgement.newBuilder().setStatus(true).build();
-            responseObserver.onNext(ack);
-            responseObserver.onCompleted();
-        }
-
-        private MessageServiceOuterClass.ClientReply processClientRequest(MessageServiceOuterClass.ClientRequest request) {
-            System.out.println("received something");
-            if (serverNode.compareTimestampAgainstLog(request)) {
-                // don't add anything to log
-                // check if reply is cached in replyCache and send that in response
-            } else {
-                if (serverNode.isBackup()) {
-                    //forward the request to leader
-                } else {
-                    serverNode.addToLog(request); // maybe call it addToLogAndReplicate?
-                }
-            }
-            return MessageServiceOuterClass.ClientReply.newBuilder().build();
-        }
-
-    }
-
-    public boolean isCandidate() {
-        return role == Role.CANDIDATE;
-    }
-
-    public boolean isLeader() {
-        return role == Role.LEADER;
-    }
-
-    public boolean isBackup() {
-        return role == Role.BACKUP;
-    }
-
     // triggered whenever backup role's timer expires or when leader id is null (on startup)
-    public void becomeCandidate() {
-        this.role = Role.CANDIDATE;
-
-//        start timer waitBeforePrepare
+    public void transitionToCandidate() {
+        state.setRole(Role.CANDIDATE);
+        state.setLeaderId(null);
+        state.clearPromises();
+        attemptPrepare();
     }
 
     //    triggered when promiseQueue collects a majority quorum of promises
-    public void becomeLeader() {
-        this.role = Role.LEADER;
-
-//        start heartbeat thread
-//        coalesce accept log and send new view
+    public void transitionToLeader() {
+        state.setRole(Role.LEADER);
+        state.setLeaderId(serverId);
+        timerBeforePrepare.stop();
+//        send New View
     }
 
     //    triggered when a prepare/accept/commit/heartbeat(? -> heartbeat should be treated same as empty accept?) with a higher ballot is received
-    public void becomeBackup() {
-        this.role = Role.BACKUP;
+    public void transitionToBackup(String newLeaderId) {
+        state.setRole(Role.BACKUP);
+        state.setLeaderId(newLeaderId);
+        timerBeforePrepare.stop();
+        leaderLivenessTimer.start();
+    }
 
-//        close heartbeat thread if it exists
-//        start timer leaderLivenessCheck
+    public void attemptPrepare() {
+        if (state.isCandidate() && !timerBeforePrepare.isRunning() && state.isActive()) {
+            broadcastPrepare();
+        }
+    }
+
+    private void broadcastPrepare() {
+        try (ExecutorService executor = Executors.newFixedThreadPool(OTHER_SERVER_COUNT)) {
+            for (String serverId : serverIds) {
+                executor.submit(() -> {
+                    MessageServiceOuterClass.PromiseMessage promise = comms.sendPrepare(serverId, state.getBallot());
+                    handlePromise(promise);
+                });
+            }
+        } catch (Exception e) {
+            logger.error("Error when sending prepare messages : {}", e.getMessage());
+//            throw new RuntimeException(e);
+        }
+    }
+
+    private void handlePromise(MessageServiceOuterClass.PromiseMessage promise) {
+        if (promise.getBallot().equals(state.getBallot().toProtoBallot())) {
+            int promiseCount = state.addPromise(promise);
+            if (promiseCount >= MAJORITY_COUNT) {
+                transitionToLeader();
+            }
+        }
+    }
+
+    private void handlePrepare(MessageServiceOuterClass.PrepareMessage prepare) {
+        timerBeforePrepare.start();
+//        check the ballot of prepare against own ballot
+//        send promise if needed
     }
 
     public void addToLog(MessageServiceOuterClass.ClientRequest request) {
@@ -146,35 +124,27 @@ public class ServerNode {
 //        request would not be in log as we're checking for that before calling addToLog
         log.add(request);
 
-        if (role == Role.LEADER) {
+        if (state.isLeader()) {
 //            send accept message
-        } else {
-//            role would be candidate as backup would never call addToLog
-            if (!waitBeforePrepare) {
-//            send prepare messages
-            }
         }
     }
 
-    //    to check if the client request is already in the log
-    private boolean compareTimestampAgainstLog(MessageServiceOuterClass.ClientRequest request) {
+    //    to check if the client request is already in the log - don't think we need this function
+    public boolean compareTimestampAgainstLog(MessageServiceOuterClass.ClientRequest request) {
         return clientState.getTimestamp(request.getClientId()) < request.getTimestamp();
     }
 
     public void start() {
-        try {
-//        Starts the server on the mentioned port
-            this.server.start();
-            logger.info("Server {} started, listening on port {}.", serverId, port);
-//        Keeps the server on till terminated
-            this.server.awaitTermination();
-        } catch (IOException e) {
-            logger.error("Server {}: Error in starting GRPC server : {}", serverId, e.getMessage());
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            logger.error("Server {}: GRPC server interrupted : {}", serverId, e.getMessage());
-            throw new RuntimeException(e);
+        comms.start();
+
+        if (state.getRole() == null) {
+            transitionToCandidate();
         }
+    }
+
+    public void shutdown() {
+//        shutdown grpc server
+//        shutdown all timers
     }
 
     public static void main(String[] args) {
