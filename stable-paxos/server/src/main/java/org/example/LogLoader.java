@@ -27,28 +27,26 @@ public class LogLoader {
      * Save a list of LogEntry records to a JSON file
      */
     public static void saveLogEntries(String serverId, Map<Long, LogEntry> logEntries) {
-
         String filePath = FILE_PATH_PREFIX + serverId + FILE_PATH_SUFFIX;
-
         try {
             ArrayNode jsonArray = mapper.createArrayNode();
-
             for (LogEntry entry : logEntries.values()) {
                 ObjectNode entryNode = mapper.createObjectNode();
                 entryNode.put("sequenceNumber", entry.sequenceNumber());
                 entryNode.put("acceptedVotes", entry.acceptedVotes());
                 entryNode.put("status", entry.status().name());
 
-                // Convert protobuf request to JSON string
-                String requestJson = JsonFormat.printer().alwaysPrintFieldsWithNoPresence().print(entry.request());
-
-                // Parse the request JSON and add as nested object
+                // Ensure we pass a built message, not a builder
+                String requestJson = JsonFormat.printer().print(entry.request());
                 JsonNode requestNode = mapper.readTree(requestJson);
                 entryNode.set("request", requestNode);
 
+                String ballotJson = JsonFormat.printer().print(entry.ballot().toProtoBallot());
+                JsonNode ballotNode = mapper.readTree(ballotJson);
+                entryNode.set("ballot", ballotNode);
+
                 jsonArray.add(entryNode);
             }
-
             mapper.writeValue(new File(filePath), jsonArray);
             logger.info("Successfully saved {} log entries to {}", logEntries.size(), filePath);
         } catch (IOException e) {
@@ -61,36 +59,35 @@ public class LogLoader {
      * Load a list of LogEntry records from a JSON file
      */
     public static Map<Long, LogEntry> loadLogEntries(String serverId) {
-
         String filePath = FILE_PATH_PREFIX + serverId + FILE_PATH_SUFFIX;
-
         if (!new File(filePath).isFile()) {
             return null;
         }
-
         try {
             JsonNode rootNode = mapper.readTree(new File(filePath));
             Map<Long, LogEntry> logEntries = new HashMap<>();
-
             if (!rootNode.isArray()) {
                 throw new IllegalArgumentException("JSON file must contain an array of log entries");
             }
-
             for (JsonNode entryNode : rootNode) {
                 long sequenceNumber = entryNode.get("sequenceNumber").asLong();
                 int acceptedVotes = entryNode.get("acceptedVotes").asInt();
                 Status status = Status.valueOf(entryNode.get("status").asText());
 
-                // Convert request JSON back to protobuf
                 JsonNode requestNode = entryNode.get("request");
                 String requestJson = mapper.writeValueAsString(requestNode);
+                MessageServiceOuterClass.ClientRequest.Builder requestBuilder = MessageServiceOuterClass.ClientRequest.newBuilder();
+                JsonFormat.parser().ignoringUnknownFields().merge(requestJson, requestBuilder);
+                MessageServiceOuterClass.ClientRequest request = requestBuilder.build();
 
-                MessageServiceOuterClass.ClientRequest.Builder builder = MessageServiceOuterClass.ClientRequest.newBuilder();
-                JsonFormat.parser().ignoringUnknownFields().merge(requestJson, builder);
+                JsonNode ballotNode = entryNode.get("ballot");
+                String ballotJson = mapper.writeValueAsString(ballotNode);
+                MessageServiceOuterClass.Ballot.Builder ballotBuilder = MessageServiceOuterClass.Ballot.newBuilder();
+                JsonFormat.parser().ignoringUnknownFields().merge(ballotJson, ballotBuilder);
+                Ballot ballot = Ballot.fromProtoBallot(ballotBuilder.build());
 
-                logEntries.put(sequenceNumber, new LogEntry(sequenceNumber, acceptedVotes, status, builder.build()));
+                logEntries.put(sequenceNumber, new LogEntry(sequenceNumber, acceptedVotes, status, ballot, request));
             }
-
             logger.info("Server {} : Successfully loaded {} log entries from {}", serverId, logEntries.size(), filePath);
             return logEntries;
         } catch (IOException e) {

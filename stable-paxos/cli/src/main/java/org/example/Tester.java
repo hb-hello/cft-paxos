@@ -1,10 +1,6 @@
 package org.example;
 
 import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
-
-import java.io.IOException;
-import java.sql.Timestamp;
 
 import static org.example.ChannelManager.createOrGetChannel;
 
@@ -29,11 +25,19 @@ public class Tester {
 
         Config.initialize();
 
-        String serverId = "n1";
+//        String serverId = "n1";
 
-        setServerNodeActiveFlag(serverId, true);
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
-        ManagedChannel channel = ChannelManager.createOrGetChannel(serverId);
+        for (String serverId : Config.getServerIds()) {
+            setServerNodeActiveFlag(serverId, true);
+        }
+
+        ManagedChannel channel = ChannelManager.createOrGetChannel("n2");
         MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
 
         // create request here
@@ -41,11 +45,11 @@ public class Tester {
 
         // call rpc here
         try {
+            System.out.println("Sending request. Waiting for reply...");
             MessageServiceOuterClass.ClientReply reply = stub.request(request);
             System.out.println(reply);
         } catch (Exception e) {
             System.out.println("Error when communicating with server : " + e.getMessage());
         }
     }
-
 }

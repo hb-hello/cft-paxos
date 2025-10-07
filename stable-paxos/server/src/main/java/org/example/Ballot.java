@@ -1,7 +1,5 @@
 package org.example;
 
-import java.util.Objects;
-
 public class Ballot {
     private volatile MessageServiceOuterClass.Ballot protoBallot;
     private final Object lock = new Object();
@@ -49,6 +47,7 @@ public class Ballot {
 
     public void setBallot(int term, String serverId) {
         synchronized(lock) {
+            System.out.println("Setting ballot to " + term + ", " + serverId);
             this.protoBallot = protoBallot.toBuilder()
                     .setInstance(term)
                     .setSenderId(serverId)
@@ -56,11 +55,14 @@ public class Ballot {
         }
     }
 
-    public void increment() {
+    public void increment(String byServerId) {
         synchronized(lock) {
             int currentTerm = protoBallot.getInstance();
+            int newTerm = currentTerm + 1;
+            System.out.println("Incrementing ballot to " + newTerm + ", " + byServerId);
             this.protoBallot = protoBallot.toBuilder()
-                    .setInstance(currentTerm + 1)
+                    .setInstance(newTerm)
+                    .setSenderId(byServerId)
                     .build();
         }
     }
@@ -82,6 +84,10 @@ public class Ballot {
         if (thisTerm != otherTerm) {
             return thisTerm > otherTerm;
         }
+        boolean compare = thisServerId.compareTo(otherServerId) > 0;
+        if (compare) {
+            System.out.println(thisServerId + " is greater than " + otherServerId);
+        } else System.out.println(thisServerId + " is not greater than " + otherServerId);
         return thisServerId.compareTo(otherServerId) > 0;
     }
 

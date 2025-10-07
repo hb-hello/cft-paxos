@@ -18,8 +18,17 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
     //        Output of the RPC executed on the server is added to the StreamObserver passed
     @Override
     public void request(MessageServiceOuterClass.ClientRequest request, StreamObserver<MessageServiceOuterClass.ClientReply> responseObserver) {
-        responseObserver.onNext(processClientRequest(request));
-        responseObserver.onCompleted();
+        logger.info("MESSAGE: <REQUEST, ({}, {}, {}), {}, {}> received from client {}",
+                request.getTransaction().getSender(),
+                request.getTransaction().getReceiver(),
+                request.getTransaction().getAmount(),
+                request.getTimestamp(),
+                request.getClientId(),
+                request.getClientId()
+        );
+
+        // Handle the client request asynchronously
+        serverNode.handleClientRequest(request, responseObserver);
     }
 
     public void setActiveFlag(MessageServiceOuterClass.ActiveFlag request, StreamObserver<MessageServiceOuterClass.Acknowledgement> responseObserver) {
@@ -29,22 +38,19 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
         responseObserver.onCompleted();
     }
 
-//    public void prepare(MessageServiceOuterClass.PrepareMessage request, StreamObserver<MessageServiceOuterClass.PromiseMessage> responseObserver) {
-//    }
-
-    private MessageServiceOuterClass.ClientReply processClientRequest(MessageServiceOuterClass.ClientRequest request) {
-        System.out.println("received something");
-        if (serverNode.compareTimestampAgainstLog(request)) {
-            // don't add anything to log
-            // check if reply is cached in replyCache and send that in response
+    public void prepare(MessageServiceOuterClass.PrepareMessage request, StreamObserver<MessageServiceOuterClass.PromiseMessage> responseObserver) {
+        logger.info("MESSAGE: <PREPARE, <{}, {}>> received from server {}",
+                request.getBallot().getInstance(),
+                request.getBallot().getSenderId(),
+                request.getBallot().getSenderId()
+        );
+        MessageServiceOuterClass.PromiseMessage promise = serverNode.handlePrepare(request);
+        if (promise == null) {
+//            do nothing
         } else {
-            if (serverState.isBackup()) {
-                //forward the request to leader
-            } else {
-                serverNode.addToLog(request); // maybe call it addToLogAndReplicate?
-            }
+        responseObserver.onNext(promise);
+        responseObserver.onCompleted();
         }
-        return MessageServiceOuterClass.ClientReply.newBuilder().build();
     }
 
 }

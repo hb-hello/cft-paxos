@@ -59,7 +59,7 @@ public class CommunicationManager {
         try {
 //        Starts the server on the mentioned port
             this.server.start();
-            logger.info("Server {} started, listening on port {}.", serverId, Config.getServerPort(serverId));
+            logger.info("GRPC server for node {} started, listening on port {}.", serverId, Config.getServerPort(serverId));
 //        Keeps the server on till terminated
             this.server.awaitTermination();
         } catch (IOException e) {

@@ -3,8 +3,9 @@ package org.example;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -28,16 +29,9 @@ public class Log {
         this.saveExecutor = Executors.newSingleThreadExecutor();
 
         try {
-            ConcurrentHashMap<Long, LogEntry> log = (ConcurrentHashMap<Long, LogEntry>) loadLog();
-            if (log == null) {
-                this.log = new ConcurrentHashMap<>();
-                this.firstSequenceNumber = 0;
-                this.sequenceNumber = new AtomicLong(0);
-            } else {
-                this.log = log;
-                this.firstSequenceNumber = Collections.min(log.keySet());
-                this.sequenceNumber = new AtomicLong(Collections.max(log.keySet()));
-            }
+            this.log = new ConcurrentHashMap<>();
+            this.firstSequenceNumber = 0;
+            this.sequenceNumber = new AtomicLong(0);
         } catch (Exception e) {
             logger.error("Server {} : Error initializing log", serverId);
             throw new RuntimeException(e);
@@ -60,23 +54,39 @@ public class Log {
         }
     }
 
-    private Map<Long, LogEntry> loadLog() {
-        try {
-            return LogLoader.loadLogEntries(serverId);
-        } catch (Exception e) {
-            logger.error("Server {} : Error when loading log from file", serverId);
-            throw new RuntimeException(e);
-        }
-    }
+//    private Map<Long, LogEntry> load() {
+//        try {
+//            return LogLoader.loadLogEntries(serverId);
+//        } catch (Exception e) {
+//            logger.error("Server {} : Error when loading log from file", serverId);
+//            throw new RuntimeException(e);
+//        }
+//    }
 
-    public long add(MessageServiceOuterClass.ClientRequest request) {
+    public long add(MessageServiceOuterClass.ClientRequest request, Ballot ballot) {
+        logger.info("Adding transaction {} to log.", request.getTransaction());
         long seqNum = sequenceNumber.incrementAndGet();
-        LogEntry logEntry = new LogEntry(seqNum, 0, Status.ACCEPTED, request);
+        LogEntry logEntry = new LogEntry(seqNum, 0, Status.ACCEPTED, ballot, request);
         log.put(seqNum, logEntry);
 
 //        trigger async save
         this.saveExecutor.submit(this::save);
         return seqNum;
+    }
+
+    public synchronized List<MessageServiceOuterClass.AcceptMessage> getAcceptLog() {
+
+        List<MessageServiceOuterClass.AcceptMessage> acceptLog = new ArrayList<>();
+        for (long i = 1; i <= sequenceNumber.get(); i++) {
+            LogEntry logEntry = log.get(i);
+            MessageServiceOuterClass.AcceptMessage acceptLogEntry = MessageServiceOuterClass.AcceptMessage.newBuilder()
+                    .setBallot(logEntry.ballot().toProtoBallot())
+                    .setSequenceNumber(i)
+                    .setRequest(logEntry.request())
+                    .build();
+            acceptLog.add(acceptLogEntry);
+        }
+        return acceptLog;
     }
 
     public Status getStatus(long sequenceNumber) {

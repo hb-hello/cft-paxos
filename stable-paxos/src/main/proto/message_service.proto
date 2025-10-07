@@ -76,13 +76,13 @@ message PromiseMessage {
 // Accept phase
 message AcceptMessage {
   Ballot ballot = 1;
-  int32 sequence_number = 2;
+  int64 sequence_number = 2;
   ClientRequest request = 3;
 }
 
 message AcceptedMessage {
   Ballot ballot = 1;
-  int32 sequence_number = 2;
+  int64 sequence_number = 2;
   ClientRequest request = 3;
   string sender_id = 4;
 }
@@ -95,7 +95,7 @@ message NewViewMessage {
 // Commit phase
 message CommitMessage {
   Ballot ballot = 1;
-  int32 sequence_number = 2;
+  int64 sequence_number = 2;
   ClientRequest request = 3;
 }
 
