@@ -1,5 +1,7 @@
 package org.example;
 
+import java.util.Objects;
+
 public class Ballot {
     private volatile MessageServiceOuterClass.Ballot protoBallot;
     private final Object lock = new Object();
@@ -67,6 +69,13 @@ public class Ballot {
         }
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Ballot ballot = (Ballot) o;
+        return this.getTerm() == ballot.getTerm() && Objects.equals(this.getServerId(), ballot.getServerId());
+    }
+
     public boolean isGreaterThan(Ballot other) {
         int thisTerm, otherTerm;
         String thisServerId, otherServerId;
@@ -89,6 +98,10 @@ public class Ballot {
             System.out.println(thisServerId + " is greater than " + otherServerId);
         } else System.out.println(thisServerId + " is not greater than " + otherServerId);
         return thisServerId.compareTo(otherServerId) > 0;
+    }
+
+    public boolean isGreaterThanOrEqual(Ballot other) {
+        return this.equals(other) || this.isGreaterThan(other);
     }
 
     public MessageServiceOuterClass.Ballot toProtoBallot() {

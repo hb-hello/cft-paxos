@@ -41,14 +41,14 @@ public class Log {
     private void save() {
         try {
             long currentSeq = sequenceNumber.get();
-            long lastSaved = lastSavedSequenceNumber.get();
-
-            if (currentSeq > lastSaved) {
+//            long lastSaved = lastSavedSequenceNumber.get();
+//
+//            if (currentSeq > lastSaved) {
                 Map<Long, LogEntry> snapshot = new HashMap<>(log);
                 LogLoader.saveLogEntries(serverId, snapshot);
-                lastSavedSequenceNumber.set(currentSeq);
+//                lastSavedSequenceNumber.set(currentSeq);
                 logger.info("Saved log up to sequence: {}", currentSeq);
-            }
+//            }
         } catch (Exception e) {
             logger.error("Error during log save: {}", e.getMessage());
         }
@@ -74,15 +74,50 @@ public class Log {
         return seqNum;
     }
 
-    public synchronized List<MessageServiceOuterClass.AcceptMessage> getAcceptLog() {
+    public int incrementVotes(long seqNum) {
+        logger.info("Incrementing votes for sequence number {}", seqNum);
+        LogEntry logEntry = log.get(seqNum);
+        if (logEntry == null) return 0;
+        else return logEntry.incrementVotes();
+    }
+
+    public void updateToCommitted(long seqNum) {
+        logger.info("Updating status to committed for sequence number {}", seqNum);
+        LogEntry logEntry = log.get(seqNum);
+        if (logEntry != null) {
+            logEntry.setStatus(Status.COMMITTED);
+            this.saveExecutor.submit(this::save);
+        }
+    }
+
+    public void updateToExecuted(long seqNum) {
+        logger.info("Updating status to executed for sequence number {}", seqNum);
+        LogEntry logEntry = log.get(seqNum);
+        if (logEntry != null) {
+            logEntry.setStatus(Status.EXECUTED);
+            this.saveExecutor.submit(this::save);
+        }
+    }
+
+    public LogEntry getLogEntry(long seqNum) {
+        return log.get(seqNum);
+    }
+
+    public void setLogEntry(long seqNum, Ballot ballot, MessageServiceOuterClass.ClientRequest request) {
+        LogEntry newLogEntry = new LogEntry(seqNum, 0, Status.ACCEPTED, ballot, request);
+        log.put(seqNum, newLogEntry);
+        this.saveExecutor.submit(this::save);
+    }
+
+    public List<MessageServiceOuterClass.AcceptMessage> getAcceptLog() {
 
         List<MessageServiceOuterClass.AcceptMessage> acceptLog = new ArrayList<>();
         for (long i = 1; i <= sequenceNumber.get(); i++) {
             LogEntry logEntry = log.get(i);
             MessageServiceOuterClass.AcceptMessage acceptLogEntry = MessageServiceOuterClass.AcceptMessage.newBuilder()
-                    .setBallot(logEntry.ballot().toProtoBallot())
+                    .setBallot(logEntry.getBallot().toProtoBallot())
                     .setSequenceNumber(i)
-                    .setRequest(logEntry.request())
+                    .setRequest(logEntry.getRequest())
                     .build();
             acceptLog.add(acceptLogEntry);
         }
@@ -90,11 +125,23 @@ public class Log {
     }
 
     public Status getStatus(long sequenceNumber) {
-        return log.get(sequenceNumber).status();
+        return log.get(sequenceNumber).getStatus();
+    }
+
+    public boolean isAccepted(long sequenceNumber) {
+        return log.get(sequenceNumber).isAccepted();
+    }
+
+    public boolean isCommitted(long sequenceNumber) {
+        return log.get(sequenceNumber).isCommitted();
+    }
+
+    public boolean isExecuted(long sequenceNumber) {
+        return log.get(sequenceNumber).isExecuted();
     }
 
     public MessageServiceOuterClass.ClientRequest getRequest(long sequenceNumber) {
-        return log.get(sequenceNumber).request();
+        return log.get(sequenceNumber).getRequest();
     }
 
     public void print() {

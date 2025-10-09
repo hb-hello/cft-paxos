@@ -21,20 +21,20 @@ public class StateLoader {
         writer.writeValue(new File(filePath), clientStates.values());
     }
 
-    public static Map<String, StateEntry> loadState(String serverId) throws IOException {
-        String filePath = FILE_PATH_PREFIX + serverId + FILE_PATH_SUFFIX;
-
-        if (!new File(filePath).isFile()) {
-            return null;
-        }
-
-        ObjectMapper mapper = new ObjectMapper();
-        List<StateEntry> stateEntryList = mapper.readValue(new File(filePath), new TypeReference<>() {});
-
-        Map<String, StateEntry> clientStates = new HashMap<>();
-        for (StateEntry stateEntry : stateEntryList) {
-            clientStates.put(stateEntry.getClientId(), stateEntry);
-        }
-        return clientStates;
-    }
+//    public static Map<String, StateEntry> loadState(String serverId) throws IOException {
+//        String filePath = FILE_PATH_PREFIX + serverId + FILE_PATH_SUFFIX;
+//
+//        if (!new File(filePath).isFile()) {
+//            return null;
+//        }
+//
+//        ObjectMapper mapper = new ObjectMapper();
+//        List<StateEntry> stateEntryList = mapper.readValue(new File(filePath), new TypeReference<>() {});
+//
+//        Map<String, StateEntry> clientStates = new HashMap<>();
+//        for (StateEntry stateEntry : stateEntryList) {
+//            clientStates.put(stateEntry.getClientId(), stateEntry);
+//        }
+//        return clientStates;
+//    }
 }

@@ -11,9 +11,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class LogLoader {
@@ -32,16 +30,16 @@ public class LogLoader {
             ArrayNode jsonArray = mapper.createArrayNode();
             for (LogEntry entry : logEntries.values()) {
                 ObjectNode entryNode = mapper.createObjectNode();
-                entryNode.put("sequenceNumber", entry.sequenceNumber());
-                entryNode.put("acceptedVotes", entry.acceptedVotes());
-                entryNode.put("status", entry.status().name());
+                entryNode.put("sequenceNumber", entry.getSequenceNumber());
+                entryNode.put("acceptedVotes", entry.getAcceptedVotes());
+                entryNode.put("status", entry.getStatus().name());
 
                 // Ensure we pass a built message, not a builder
-                String requestJson = JsonFormat.printer().print(entry.request());
+                String requestJson = JsonFormat.printer().print(entry.getRequest());
                 JsonNode requestNode = mapper.readTree(requestJson);
                 entryNode.set("request", requestNode);
 
-                String ballotJson = JsonFormat.printer().print(entry.ballot().toProtoBallot());
+                String ballotJson = JsonFormat.printer().print(entry.getBallot().toProtoBallot());
                 JsonNode ballotNode = mapper.readTree(ballotJson);
                 entryNode.set("ballot", ballotNode);
 

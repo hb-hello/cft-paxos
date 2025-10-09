@@ -9,9 +9,10 @@ service MessageService {
 
   rpc Prepare (PrepareMessage) returns (PromiseMessage) {};
   rpc Accept (AcceptMessage) returns (AcceptedMessage) {};
-  rpc NewView (NewViewMessage) returns (google.protobuf.Empty) {};
+  rpc NewView (NewViewMessage) returns (stream AcceptedMessage) {};
   rpc Accepted (AcceptedMessage) returns (google.protobuf.Empty) {};
   rpc Commit (CommitMessage) returns (google.protobuf.Empty) {};
+  rpc ForwardClientRequest (ClientRequest) returns (google.protobuf.Empty) {};
 
   rpc setActiveFlag (ActiveFlag) returns (Acknowledgement) {};
 

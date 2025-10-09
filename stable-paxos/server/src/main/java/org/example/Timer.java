@@ -60,11 +60,9 @@ public class Timer {
 
         if (currentFuture != null && !currentFuture.isDone()) {
             boolean mayInterrupt = !isExecutingCallback.get();
-            System.out.println("Cancelling timer to refresh it (mayInterrupt=" + mayInterrupt + ")");
             currentFuture.cancel(mayInterrupt);
         }
 
-        System.out.println("Starting new timer (will fire in " + timeoutMillis + "ms)");
         start();
     }
 

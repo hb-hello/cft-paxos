@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.example.StateLoader.loadState;
 import static org.example.StateLoader.saveState;
 
 public class ClientState {
@@ -17,14 +16,14 @@ public class ClientState {
     private static final Logger logger = LogManager.getLogger(ClientState.class);
     private final ExecutorService saveExecutor;
 
-    private Map<String, StateEntry> clientState;
+    private final Map<String, StateEntry> clientState;
     private final String serverId;  // the JSON file with client IDs and starting bank balances
 
     public ClientState(String serverId) {
         this.clientState = new ConcurrentHashMap<>(); // concurrent keeps it thread-safe
         this.serverId = serverId;
         this.saveExecutor = Executors.newSingleThreadExecutor();
-        this.getOrInitialize();
+        this.initialize();
     }
 
     private void initialize() {
@@ -49,16 +48,15 @@ public class ClientState {
         }
     }
 
-    private void getOrInitialize() {
-        try {
-            if (loadState(serverId) == null) {
-                this.initialize();
-            } else this.clientState = loadState(serverId);
-        } catch (IOException e) {
-            logger.error("Server {}: Error loading state from JSON file : {}", serverId, e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
+//    private void getOrInitialize() {
+//        try {
+//            if (loadState(serverId) == null) {
+//                this.initialize();
+//        } catch (IOException e) {
+//            logger.error("Server {}: Error loading state from JSON file : {}", serverId, e.getMessage());
+//            throw new RuntimeException(e);
+//        }
+//    }
 
     public long getTimestamp(String clientId) {
         if (clientState.containsKey(clientId)) {
@@ -68,6 +66,15 @@ public class ClientState {
             return 0L;
         }
 
+    }
+
+    public void setTimestamp(String clientId, long timestamp) {
+        if (clientState.containsKey(clientId)) {
+            clientState.get(clientId).setLastTimestampRepliedTo(timestamp);
+            saveExecutor.submit(this::save);  // Save after updating timestamp
+        } else {
+            logger.error("Client ID not found while setting timestamp");
+        }
     }
 
     public double getBankBalance(String clientId) {
@@ -107,6 +114,10 @@ public class ClientState {
             }
             return success;
         } else return false;
+    }
+
+    public void close() {
+        saveExecutor.shutdown();
     }
 
 }

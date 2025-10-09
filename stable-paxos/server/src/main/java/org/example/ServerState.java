@@ -1,5 +1,6 @@
 package org.example;
 
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -57,6 +58,10 @@ public class ServerState {
 
     public void incrementBallot() {
         ballot.increment(serverId);
+    }
+
+    public List<MessageServiceOuterClass.PromiseMessage> getPromises() {
+        return List.copyOf(promiseMessages);
     }
 
     public int addPromise(MessageServiceOuterClass.PromiseMessage promise) {
