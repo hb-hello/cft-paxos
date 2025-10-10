@@ -43,7 +43,7 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
                 request.getBallot().getSenderId(),
                 request.getBallot().getSenderId()
         );
-        MessageServiceOuterClass.PromiseMessage promise = serverNode.handlePrepare(request);
+        MessageServiceOuterClass.PromiseMessage promise = serverNode.handlePrepare(request, responseObserver);
         if (promise == null) {
 //            do nothing
         } else {
@@ -85,6 +85,9 @@ public class MessageService extends MessageServiceGrpc.MessageServiceImplBase {
                 request.getBallot().getSenderId());
 
         serverNode.handleCommitMessage(request);
+
+        responseObserver.onNext(Empty.getDefaultInstance());
+        responseObserver.onCompleted();
     }
 
     public void forwardClientRequest(MessageServiceOuterClass.ClientRequest request, StreamObserver<Empty> responseObserver) {

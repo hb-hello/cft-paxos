@@ -16,8 +16,6 @@ service MessageService {
 
   rpc setActiveFlag (ActiveFlag) returns (Acknowledgement) {};
 
-  rpc sendHeartbeat(HeartbeatRequest) returns (HeartbeatResponse);
-
   rpc sendCheckpoint(CheckpointMessage) returns (Acknowledgement);
 }
 
@@ -98,16 +96,6 @@ message CommitMessage {
   Ballot ballot = 1;
   int64 sequence_number = 2;
   ClientRequest request = 3;
-}
-
-// For liveness checks
-message HeartbeatRequest {
-  string leader_id = 1;
-  Ballot ballot = 2;
-}
-
-message HeartbeatResponse {
-  // Empty response is sufficient
 }
 
 // A map representing the entire state of all bank accounts

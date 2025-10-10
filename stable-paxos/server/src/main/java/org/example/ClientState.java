@@ -71,6 +71,7 @@ public class ClientState {
     public void setTimestamp(String clientId, long timestamp) {
         if (clientState.containsKey(clientId)) {
             clientState.get(clientId).setLastTimestampRepliedTo(timestamp);
+            logger.info("Timestamp for client ID : {} updated to {}", clientId, timestamp);
             saveExecutor.submit(this::save);  // Save after updating timestamp
         } else {
             logger.error("Client ID not found while setting timestamp");
