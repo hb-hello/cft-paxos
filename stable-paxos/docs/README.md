@@ -1,4 +1,7 @@
 
+Final submission for CSE 535 - Distributed Systems - Project 1
+2025-10-11
+
 ## CSE 535 - Distributed Systems - Project 1 : Stable PAXOS Banking Application
 This repository implements a gRPC-based distributed banking system that uses a tweaked Multi-Paxos protocol to replicate a transaction log and maintain consistent account balances across a 5-node cluster.
 
