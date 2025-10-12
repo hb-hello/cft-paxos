@@ -53,7 +53,8 @@ public class ServerState {
     }
 
     public void setBallot(Ballot ballot) {
-        ballot.setBallot(ballot.getTerm(), ballot.getServerId());
+        this.ballot.setBallot(ballot.getTerm(), ballot.getServerId());
+        System.out.println("Set ballot to " + getBallot().toString());
     }
 
     public void incrementBallot() {

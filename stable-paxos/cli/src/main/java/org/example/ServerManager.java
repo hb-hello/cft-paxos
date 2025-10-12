@@ -1,5 +1,6 @@
 package org.example;
 
+import io.grpc.ManagedChannel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -9,10 +10,39 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.example.ChannelManager.createOrGetChannel;
+
 public class ServerManager {
 
     private static final Logger logger = LogManager.getLogger(ServerManager.class);
     private static final List<Process> processes = new ArrayList<>();
+
+    private static void setServerNodeActiveFlag(String serverId, boolean activeFlag) {
+        try {
+            ManagedChannel channel = createOrGetChannel(serverId);
+            MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
+            MessageServiceOuterClass.Acknowledgement ack = stub.setActiveFlag(MessageServiceOuterClass.ActiveFlag.newBuilder().setActiveFlag(activeFlag).build());
+            if (!ack.getStatus()) {
+                logger.error("Server {} not activated", serverId);
+                throw new RuntimeException("Server {} not activated");
+            } else logger.info("Server {} {}", serverId, activeFlag ? "activated" : "deactivated");
+        } catch (RuntimeException e) {
+            logger.error("Error when activating server {}.", serverId);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void activateServers(TransactionSet transactionSet) {
+//        Deactivate all servers
+        for (String serverId : Config.getServers().keySet()) {
+            setServerNodeActiveFlag(serverId, false);
+        }
+
+//        Activate required servers based on transaction set
+        for (String serverIdToActivate : transactionSet.activeNodesList()) {
+            setServerNodeActiveFlag(serverIdToActivate, true);
+        }
+    }
 
     public static void startAllServerProcesses() {
         logger.info("Starting all server node processes...");

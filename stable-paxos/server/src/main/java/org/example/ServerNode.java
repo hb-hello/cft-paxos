@@ -1,5 +1,7 @@
 package org.example;
 
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,9 +23,9 @@ public class ServerNode {
 
     private final int MAJORITY_COUNT = 2;
     private final int OTHER_SERVER_COUNT = 4;
-    private final long WAIT_BEFORE_PREPARE_MIN_MILLIS = 2000;
-    private final long WAIT_BEFORE_PREPARE_MAX_MILLIS = 3000;
-    private final long REQUEST_TIMEOUT_MILLIS = 5000;
+    private final long WAIT_BEFORE_PREPARE_MIN_MILLIS = 500;
+    private final long WAIT_BEFORE_PREPARE_MAX_MILLIS = 700;
+    private final long REQUEST_TIMEOUT_MILLIS = 1000;
 
     private final String serverId;
     private final ServerState state;
@@ -36,6 +38,9 @@ public class ServerNode {
     // Track pending client requests
     private final ConcurrentHashMap<String, PendingRequest> pendingRequests;
     private final Set<String> requestsIncludedInNewView;
+    private final ConcurrentHashMap<String, Boolean> requestsCommitted;
+    private final ConcurrentHashMap<String, Long> requestsAccepted;
+
 
     //    Track received prepare messages
     private final ConcurrentHashMap<String, LoggedPrepareMessage> receivedPrepareMessages;
@@ -64,6 +69,9 @@ public class ServerNode {
         requestsIncludedInNewView = ConcurrentHashMap.newKeySet();
         this.receivedPrepareMessages = new ConcurrentHashMap<>();
         this.replyCache = new ConcurrentHashMap<>();
+        this.requestsCommitted = new ConcurrentHashMap<>();
+        this.requestsAccepted = new ConcurrentHashMap<>();
+
 
 //        set up server state - includes log and ballot
         this.state = new ServerState(serverId);
@@ -85,7 +93,11 @@ public class ServerNode {
 
         // Network I/O: Fixed thread pool sized for concurrent network operations
         // Size based on: OTHER_SERVER_COUNT * 2 (for send/receive) + buffer
-        this.networkExecutor = createMonitoredNetworkExecutor();
+//        this.networkExecutor = createMonitoredNetworkExecutor();
+        this.networkExecutor = Executors.newFixedThreadPool(
+                Math.max(50, OTHER_SERVER_COUNT * 2),
+                createNamedThreadFactory("network-io")
+        );
 
         // Streaming operations: Fixed thread pool for long-running streaming RPCs
         // Sized for concurrent NewView operations to all servers
@@ -122,6 +134,18 @@ public class ServerNode {
         comms.setActive(active);
     }
 
+    public List<String> getCommunicationLog() {
+        return comms.getCommunicationLog();
+    }
+
+    public void logCommunication(String message) {
+        comms.logCommunication(message);
+    }
+
+    public Log getLog() {
+        return log;
+    }
+
     private long getRandom(long min, long max) {
         Random random = new Random();
         return random.nextLong(max - min + 1) + min;
@@ -129,6 +153,10 @@ public class ServerNode {
 
     public ServerState getState() {
         return state;
+    }
+
+    public List<MessageServiceOuterClass.NewViewMessage> getNewViews() {
+        return comms.getNewViews();
     }
 
     public boolean isActive() {
@@ -147,18 +175,19 @@ public class ServerNode {
     private void onRequestTimeout() {
         logger.warn("Request timeout! {} pending CLIENT requests not executed", pendingRequests.size());
 
-        if (!pendingRequests.isEmpty() && !state.isLeader()) {
-            logger.info("Attempting to become leader to process pending client requests");
-            // Submit to state executor for thread-safe state transition
-            stateExecutor.submit(() -> {
-                // process logged prepares
-
-                // If role is backup and leader seems dead, consider becoming candidate
-                if (state.isBackup() || state.getLeaderId() != null) {
-                    logger.info("Leader suspected dead, transitioning to candidate");
-                    transitionToCandidate();
-                }
-            });
+        if (!pendingRequests.isEmpty()) {
+            if (!state.isLeader()) {
+                logger.info("Attempting to become leader to process pending client requests");
+                // Submit to state executor for thread-safe state transition
+                stateExecutor.submit(() -> {
+                    // If role is backup and leader seems dead, consider becoming candidate
+                    logger.info("Current role: {}, LeaderId: {}", state.getRole(), state.getLeaderId());
+                    if (state.isBackup() || state.getLeaderId() == null) {
+                        logger.info("Leader suspected dead, transitioning to candidate");
+                        transitionToCandidate();
+                    }
+                });
+            }
         }
     }
 
@@ -171,11 +200,23 @@ public class ServerNode {
         state.setRole(Role.CANDIDATE);
         state.setLeaderId(null);
 
-        if (requestTimer.isRunning()) requestTimer.stop();
+//        This will keep trying to start leader elections to execute all transactions it has received
+        stopOrRefreshRequestTimer();
+//        requestTimer.stop();
 
         logger.info("Role: CANDIDATE, Ballot: {}, LeaderId: null", state.getBallot());
 
-        attemptPrepare();
+        if (!timerBeforePrepare.isRunning()) attemptPrepare();
+    }
+
+    private void stopOrRefreshRequestTimer() {
+        if (pendingRequests.isEmpty() || !comms.isActive()) {
+            requestTimer.stop();
+            logger.info("Leader liveness timer stopped as there are no pending requests or server is inactive");
+        } else {
+            requestTimer.startOrRefresh();
+            logger.info("Leader liveness timer refreshed as there are {} pending requests", pendingRequests.size());
+        }
     }
 
     //    triggered when promiseQueue collects a majority quorum of promises
@@ -185,7 +226,8 @@ public class ServerNode {
         state.setRole(Role.LEADER);
         state.setLeaderId(serverId);
         timerBeforePrepare.stop();
-//        leaderLivenessTimer.stop();
+
+//        if (!pendingRequests.isEmpty()) requestTimer.startOrRefresh();
 
         logger.info("Role: LEADER, Ballot: {}, LeaderId: {}", state.getBallot(), serverId);
 
@@ -193,6 +235,7 @@ public class ServerNode {
 
         Ballot ballot = state.getBallot();
         logExecutor.submit(() -> {
+            logger.info("Attempting to Broadcasting NEW VIEW for ballot {}", ballot);
             broadcastNewView(ballot);
             processPendingRequests();
         });
@@ -205,7 +248,6 @@ public class ServerNode {
         state.setRole(Role.BACKUP);
         state.setLeaderId(newLeaderId);
         state.setBallot(newBallot);
-        state.clearPromises();
         timerBeforePrepare.stop();
 //        Start timer to monitor leader
         requestTimer.startOrRefresh();
@@ -244,6 +286,7 @@ public class ServerNode {
     private void broadcastPrepare() {
 
         Ballot currentBallot = state.getBallot();
+        state.clearPromises();
 
         for (String serverId : otherServerIds) {
             networkExecutor.submit(() -> {
@@ -251,11 +294,18 @@ public class ServerNode {
                     MessageServiceOuterClass.PromiseMessage promise = comms.sendPrepare(serverId, currentBallot);
 
                     if (promise != null) {
+                        logCommunication(
+                                String.format("MESSAGE: <PROMISE, <%d, %s>, acceptLog (%d items)> received from server %s", promise.getBallot().getInstance(), promise.getBallot().getSenderId(), promise.getAcceptLogList().size(), promise.getSenderId())
+                        );
                         logger.info("MESSAGE: <PROMISE, <{}, {}>, acceptLog ({} items)> received from server {}", promise.getBallot().getInstance(), promise.getBallot().getSenderId(), promise.getAcceptLogList().size(), promise.getSenderId());
 
                         // Process promise in message executor
                         messageExecutor.submit(() -> handlePromise(promise));
                     }
+                } catch (StatusRuntimeException e) {
+                    if (e.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED)
+                        logger.error("Prepare request timed out for server {} - it might be inactive",
+                                serverId);
                 } catch (Exception e) {
                     logger.error("Error sending prepare to {}: {}", serverId, e.getMessage());
                 }
@@ -291,9 +341,11 @@ public class ServerNode {
 
         logger.info("Processing accept logs from {} promises", promises.size());
 
+        Ballot currentBallot = state.getBallot();
+
         for (MessageServiceOuterClass.PromiseMessage promise : promises) {
             for (MessageServiceOuterClass.AcceptMessage acceptMessage : promise.getAcceptLogList()) {
-                logExecutor.submit(() -> processOthersAcceptMessage(acceptMessage));
+                processOthersAcceptMessage(acceptMessage, currentBallot);
             }
         }
     }
@@ -309,7 +361,7 @@ public class ServerNode {
 
         for (PendingRequest pendingRequest : pendingRequests.values()) {
             String key = Log.getRequestKey(pendingRequest.request());
-            if (requestsIncludedInNewView.remove(key)) {
+            if (requestsIncludedInNewView.contains(key)) {
                 // Already in NewView: skip this one
                 continue;
             }
@@ -318,24 +370,24 @@ public class ServerNode {
         }
 
         // Clear all pending requests
-        pendingRequests.clear();
-        requestTimer.stop();
+//        pendingRequests.clear();
+//        requestTimer.stop();
 
         logger.info("Finished processing pending client requests");
     }
 
     //    apply the accept messages from accept log received in promises, to self log
-    private void processOthersAcceptMessage(MessageServiceOuterClass.AcceptMessage acceptMessage) {
+    private void processOthersAcceptMessage(MessageServiceOuterClass.AcceptMessage acceptMessage, Ballot currentBallot) {
         long seqNum = acceptMessage.getSequenceNumber();
         Ballot acceptBallot = Ballot.fromProtoBallot(acceptMessage.getBallot());
         LogEntry existingEntry = log.getLogEntry(seqNum);
 
         if (existingEntry == null) {
-            log.add(acceptMessage.getRequest(), acceptBallot);
+            log.setLogEntry(acceptMessage.getSequenceNumber(), currentBallot, acceptMessage.getRequest());
             clientState.setTimestamp(acceptMessage.getRequest().getClientId(), acceptMessage.getRequest().getTimestamp());
             logger.info("Applied accept from promise to log at seq={}", seqNum);
         } else if (acceptBallot.isGreaterThan(existingEntry.getBallot())) {
-            log.setLogEntry(seqNum, acceptBallot, existingEntry.getRequest());
+            log.setLogEntry(seqNum, currentBallot, existingEntry.getRequest());
             logger.info("Updated ballot from accept in promise in log at seq={}", seqNum);
         } else {
             logger.debug("Accept from promise already in log at seq={}", seqNum);
@@ -347,54 +399,43 @@ public class ServerNode {
 
         Ballot incomingBallot = Ballot.fromProtoBallot(prepare.getBallot());
 
-        // Submit to message executor first, then coordinate with state executor and eventually use logExecutor to access logs and create the promise
-        CompletableFuture<MessageServiceOuterClass.PromiseMessage> responseFuture = CompletableFuture.supplyAsync(() -> {
-            return logPrepareIfLeaderIsAlive(incomingBallot, prepare, responseObserver);
-        }, messageExecutor).thenComposeAsync(ballot -> {
-            if (ballot == null) {
-                return CompletableFuture.completedFuture(null);
+        CompletableFuture<MessageServiceOuterClass.PromiseMessage> promiseFuture = CompletableFuture.supplyAsync(() -> {
+            timerBeforePrepare.startOrRefresh();
+
+            // 1. Check leader liveness (now safely on the stateExecutor)
+            boolean leaderIsAlive = requestTimer.isRunning();
+            if (leaderIsAlive && state.isBackup()) {
+                logger.info("Leader still considered alive - logging prepare from {}", incomingBallot.getServerId());
+                receivedPrepareMessages.put(incomingBallot.getServerId(), new LoggedPrepareMessage(prepare, responseObserver));
+                return null; // Don't respond yet
             }
-            // Leader suspected dead, proceed with comparing ballot
-            return CompletableFuture.supplyAsync(() -> {
-                return checkAndUpdateBallotIfCandidate(ballot);
-            }, stateExecutor).thenCombineAsync(CompletableFuture.supplyAsync(log::getAcceptLog, logExecutor), this::createPromise);
+
+            // 2. Leader suspected dead, proceed with ballot check
+            logger.info("Leader suspected dead - processing prepare immediately");
+            Ballot currentBallot = state.getBallot();
+            if (incomingBallot.isGreaterThan(currentBallot)) {
+
+                if (state.isLeader()) {
+                    transitionToCandidate();
+                }
+
+                state.setBallot(incomingBallot);
+
+                // 3. Get the accept log and create the promise
+                // Since this is a blocking call inside a CompletableFuture, it's okay.
+                List<MessageServiceOuterClass.AcceptMessage> acceptLog = log.getAcceptLog();
+                return createPromise(incomingBallot, acceptLog);
+            }
+
+            return null; // Ballot not high enough
         }, stateExecutor);
 
         try {
-            return responseFuture.get(500, TimeUnit.MILLISECONDS);
+            return promiseFuture.get(500, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             logger.error("Error processing prepare: {}", e.getMessage());
             return null;
         }
-    }
-
-    private Ballot logPrepareIfLeaderIsAlive(Ballot incomingBallot, MessageServiceOuterClass.PrepareMessage prepare, StreamObserver<MessageServiceOuterClass.PromiseMessage> responseObserver) {
-        boolean leaderIsAlive = requestTimer.isRunning();
-
-        if (leaderIsAlive) {
-            // Leader is still considered alive - log this prepare message but don't respond
-            logger.info("Leader still considered alive - logging prepare from {}", incomingBallot.getServerId());
-            receivedPrepareMessages.put(incomingBallot.getServerId(), new LoggedPrepareMessage(prepare, responseObserver));
-            return null;
-        }
-
-        logger.info("Leader suspected dead - processing prepare immediately");
-        return incomingBallot;
-    }
-
-    private Ballot checkAndUpdateBallotIfCandidate(Ballot incomingBallot) {
-
-        if (state.isCandidate() || state.getLeaderId() == null) {
-            timerBeforePrepare.startOrRefresh();
-        }
-
-        Ballot currentBallot = state.getBallot();
-
-        if (incomingBallot.isGreaterThan(currentBallot)) {
-            state.setBallot(incomingBallot);
-            return incomingBallot;
-        } else return null;
-
     }
 
     //    Process all logged prepare messages and choose the highest ballot to send a promise
@@ -439,6 +480,18 @@ public class ServerNode {
         if (ballot == null) {
             return null;
         }
+
+        Ballot currentBallot = state.getBallot();
+
+//        Check again that ballot is still the highest
+        if (currentBallot.isGreaterThan(ballot)) {
+            logger.info("Current ballot is now higher than incoming ballot, not sending promise");
+            return null;
+        }
+
+        logCommunication(
+                String.format("MESSAGE: <PROMISE, <%d, %s>, acceptLog (%d items)> sent to server %s", ballot.getTerm(), ballot.getServerId(), acceptLog.size(), ballot.getServerId())
+        );
         logger.info("MESSAGE: <PROMISE, <{}, {}>, acceptLog ({} items)> sent to server {}", ballot.getTerm(), ballot.getServerId(), acceptLog.size(), ballot.getServerId());
         return MessageServiceOuterClass.PromiseMessage.newBuilder().addAllAcceptLog(acceptLog).setBallot(ballot.toProtoBallot()).setSenderId(serverId).build();
     }
@@ -476,21 +529,10 @@ public class ServerNode {
                     transitionToCandidate();
                 }
 
-//                Add new client requests to pending requests to keep track of the response observer to later reply to the client
-                if (!pendingRequests.containsKey(requestKey)) {
-                    // Refresh timer when seeing a client request for the first time
-                    logger.info("Starting / Refreshing leader liveness timer ({}ms)", REQUEST_TIMEOUT_MILLIS);
-                    requestTimer.startOrRefresh();
-                    pendingRequests.put(requestKey, new PendingRequest(request, responseObserver));
-
-                    logger.info("Added to pending requests. Total pending: {}", pendingRequests.size());
-                } else {
-                    logger.info("Request {} found in pending requests already, ignoring", requestKey);
-                    return;
-                }
+                if (!addToPendingRequests(request, responseObserver, requestKey)) return;
 
 //                Every request added to pending requests is added to log if role is leader or candidate
-                if (isLeader || state.isCandidate()) {
+                if (isLeader) {
                     logger.info("Processing request immediately as {} and sending to processClientRequest for log updates", isLeader ? "leader" : "candidate");
                     logExecutor.submit(() -> processClientRequest(request, isLeader));
                     return;
@@ -507,10 +549,40 @@ public class ServerNode {
         });
     }
 
+    private boolean addToPendingRequests(MessageServiceOuterClass.ClientRequest request, StreamObserver<MessageServiceOuterClass.ClientReply> responseObserver, String requestKey) {
+        // Add new client requests to pending requests to keep track of the response observer to later reply to the client
+        if (!pendingRequests.containsKey(requestKey)) {
+            // Refresh timer when seeing a client request for the first time
+            logger.info("Starting / Refreshing leader liveness timer ({}ms)", REQUEST_TIMEOUT_MILLIS);
+            requestTimer.startOrRefresh();
+            pendingRequests.put(requestKey, new PendingRequest(request, responseObserver));
+
+            logger.info("Request {} added to pending requests. Total pending: {}", requestKey, pendingRequests.size());
+        } else {
+            logger.info("Request {} found in pending requests already, ignoring", requestKey);
+            return false;
+        }
+        return true;
+    }
+
+    private void removeFromPendingRequests(String requestKey) {
+        // Remove from pendingRequests
+        pendingRequests.remove(requestKey);
+        logger.info("Request {} removed from pending requests. Total pending: {}", requestKey, pendingRequests.size());
+        if (pendingRequests.isEmpty()) {
+            requestTimer.stop();
+        } else requestTimer.startOrRefresh();
+    }
+
     //    Only adds to log if role is candidate; adds to log and broadcasts accept requests if role is leader
     public void processClientRequest(MessageServiceOuterClass.ClientRequest request, boolean sendAccept) {
 //        Add request to log
         logger.info("Processing client request {} as {} and sending accept? {}", getRequestKey(request), sendAccept ? "leader" : "candidate", sendAccept);
+
+        if (requestsAccepted.containsKey(getRequestKey(request))) {
+            logger.info("Request {} already accepted at seq={}, ignoring", getRequestKey(request), requestsAccepted.get(getRequestKey(request)));
+            return;
+        }
 
         long seqNum = log.add(request, state.getBallot()); // safe as this is called within a stateExecutor
         clientState.setTimestamp(request.getClientId(), request.getTimestamp());
@@ -521,6 +593,8 @@ public class ServerNode {
             logger.error("Failed to retrieve entry at seq={} after adding!", seqNum);
             return;
         }
+
+        requestsAccepted.put(getRequestKey(request), seqNum);
 
         logger.info("Entry at seq={}: acceptedVotes={}, sendAccept={}",
                 seqNum, entry.getAcceptedVotes(), sendAccept);
@@ -558,27 +632,27 @@ public class ServerNode {
         List<PendingRequest> snapshotPendingRequests = new ArrayList<>(pendingRequests.values());
 
 //        Add only new (non-duplicate) snapshot requests, and record their keys for later dedup
-        for (PendingRequest pending : snapshotPendingRequests) {
-            String key = Log.getRequestKey(pending.request());
-            if (keysInNewView.add(key)) { // add returns false if already present
-                long seqNum = log.add(pending.request(), ballot);
-                MessageServiceOuterClass.AcceptMessage acceptMsg =
-                        MessageServiceOuterClass.AcceptMessage.newBuilder()
-                                .setBallot(ballot.toProtoBallot())
-                                .setSequenceNumber(seqNum)
-                                .setRequest(pending.request())
-                                .build();
-                clientState.setTimestamp(pending.request().getClientId(), pending.request().getTimestamp());
-                acceptLog.add(acceptMsg);
-            }
-        }
+//        for (PendingRequest pending : snapshotPendingRequests) {
+//            String key = Log.getRequestKey(pending.request());
+//            if (keysInNewView.add(key)) { // add returns false if already present
+//                long seqNum = log.add(pending.request(), ballot);
+//                MessageServiceOuterClass.AcceptMessage acceptMsg =
+//                        MessageServiceOuterClass.AcceptMessage.newBuilder()
+//                                .setBallot(ballot.toProtoBallot())
+//                                .setSequenceNumber(seqNum)
+//                                .setRequest(pending.request())
+//                                .build();
+//                clientState.setTimestamp(pending.request().getClientId(), pending.request().getTimestamp());
+//                acceptLog.add(acceptMsg);
+//            }
+//        }
 
         // Clear and update the set of included keys
         requestsIncludedInNewView.clear();
         requestsIncludedInNewView.addAll(keysInNewView);
 
 //        Build NewView message
-        MessageServiceOuterClass.NewViewMessage newViewMsg =
+        MessageServiceOuterClass.NewViewMessage newViewMessage =
                 MessageServiceOuterClass.NewViewMessage.newBuilder()
                         .setBallot(ballot.toProtoBallot())
                         .addAllAcceptLog(acceptLog)
@@ -587,13 +661,15 @@ public class ServerNode {
         logger.info("Broadcasting NewView with {} accept log entries to {} servers",
                 acceptLog.size(), otherServerIds.size());
 
+        comms.addNewView(newViewMessage);
+
         // Send NewView using streamingExecutor (NOT networkExecutor)
         // Each streaming RPC needs its own thread to handle the stream of responses
         for (String serverId : otherServerIds) {
             streamingExecutor.submit(() -> {
                 try {
                     logger.info("Starting NewView stream to server {}", serverId);
-                    comms.sendNewView(serverId, newViewMsg, this::handleAccepted);
+                    comms.sendNewView(serverId, newViewMessage, this::handleAccepted);
                     logger.info("Completed NewView stream to server {}", serverId);
                 } catch (Exception e) {
                     logger.error("Error in NewView stream to server {}: {}", serverId, e.getMessage(), e);
@@ -613,6 +689,14 @@ public class ServerNode {
     }
 
     public void handleNewView(MessageServiceOuterClass.NewViewMessage newViewMessage, StreamObserver<MessageServiceOuterClass.AcceptedMessage> responseObserver) {
+
+        Ballot currentBallot = state.getBallot();
+        Ballot newViewBallot = Ballot.fromProtoBallot(newViewMessage.getBallot());
+
+        if (!newViewBallot.isGreaterThanOrEqual(currentBallot) || (state.isLeader() && requestTimer.isRunning())) {
+            logger.info("Ignoring NewView with lower ballot: current={}, newView={}", currentBallot, newViewBallot);
+            return;
+        }
 
         streamingExecutor.submit(() -> {
             try {
@@ -700,6 +784,10 @@ public class ServerNode {
                         } else {
                             logger.warn("Received null ACCEPTED from {} for seq={}", serverIdCapture, seqCapture);
                         }
+                    } catch (StatusRuntimeException e) {
+                        if (e.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED)
+                            logger.error("Accept request timed out for server {} for seq={} - it might be inactive",
+                                    serverIdCapture, seqCapture);
                     } catch (Exception e) {
                         logger.error("Error in task for server {} seq={}: {}",
                                 serverIdCapture, seqCapture, e.getMessage(), e);
@@ -708,8 +796,8 @@ public class ServerNode {
                 });
 
                 submittedCount++;
-                logger.info("Successfully submitted task {} for server {}, Future: {}",
-                        submittedCount, targetServerId, future.getClass().getSimpleName());
+//                logger.info("Successfully submitted task {} for server {}, Future: {}",
+//                        submittedCount, targetServerId, future.getClass().getSimpleName());
 
             } catch (RejectedExecutionException e) {
                 logger.error("Task REJECTED for server {}: {}", targetServerId, e.getMessage());
@@ -717,7 +805,7 @@ public class ServerNode {
                 logger.error("Error submitting task for server {}: {}", targetServerId, e.getMessage(), e);
             }
         }
-        logger.info("Submitted {}/{} ACCEPT sends to network executor for seq={}", submittedCount, otherServerIds.size(), seqNum);
+//        logger.info("Submitted {}/{} ACCEPT sends to network executor for seq={}", submittedCount, otherServerIds.size(), seqNum);
 
         // Debug executor state AFTER submitting
 //        logger.info("Executor state after submission:");
@@ -728,6 +816,12 @@ public class ServerNode {
 
     public MessageServiceOuterClass.AcceptedMessage handleAccept(MessageServiceOuterClass.AcceptMessage
                                                                          acceptMessage) {
+
+        if (state.isLeader() && requestTimer.isRunning()) {
+            logger.info("Live leader received ACCEPT message - ignoring");
+            return null;
+        }
+
         Ballot acceptBallot = Ballot.fromProtoBallot(acceptMessage.getBallot());
         long seqNum = acceptMessage.getSequenceNumber();
 
@@ -741,10 +835,12 @@ public class ServerNode {
             return CompletableFuture.supplyAsync(() -> {
                 LogEntry existingEntry = log.getLogEntry(seqNum);
 
+                requestsAccepted.put(getRequestKey(acceptMessage.getRequest()), seqNum);
+
                 if (existingEntry == null) {
 //                    Refresh timer, as request is being seen for the first time
-                    requestTimer.startOrRefresh();
-                    log.add(acceptMessage.getRequest(), acceptBallot);
+                    addToPendingRequests(acceptMessage.getRequest(), null, getRequestKey(acceptMessage.getRequest()));
+                    log.setLogEntry(seqNum, acceptBallot, acceptMessage.getRequest());
                     clientState.setTimestamp(acceptMessage.getRequest().getClientId(), acceptMessage.getRequest().getTimestamp());
                     logger.info("Applied accept to log at seq={}", seqNum);
 
@@ -756,7 +852,10 @@ public class ServerNode {
                     logger.debug("Accept already in log at seq={}", seqNum);
                 }
 
-                logger.info("MESSAGE: <ACCEPTED> sent to leader {}", acceptBallot.getServerId());
+                logCommunication(
+                        String.format("MESSAGE: <ACCEPTED, <%d, %s>, %d> sent to leader %s", acceptBallot.getTerm(), acceptBallot.getServerId(), seqNum, acceptBallot.getServerId())
+                );
+                logger.info("MESSAGE: <ACCEPTED {}, {}> sent to leader {}", acceptBallot, seqNum, acceptBallot.getServerId());
                 return MessageServiceOuterClass.AcceptedMessage.newBuilder().setBallot(acceptMessage.getBallot()).setSequenceNumber(seqNum).setSenderId(serverId).build();
 
             }, logExecutor);
@@ -776,8 +875,10 @@ public class ServerNode {
     private boolean updateBallotIfGreater(Ballot newBallot) {
         if (newBallot.isGreaterThanOrEqual(state.getBallot())) {
 
-            logger.info("Is {}, {} greater than {}, {}?", newBallot.getTerm(), newBallot.getServerId(), state.getBallot().getTerm(), state.getBallot().getTerm());
-            if (newBallot.isGreaterThan(state.getBallot())) {
+            Ballot currentBallot = state.getBallot();
+
+            logger.info("Is {}, {} greater than {}, {}? {}", newBallot.getTerm(), newBallot.getServerId(), currentBallot.getTerm(), currentBallot.getServerId(), newBallot.isGreaterThan(currentBallot));
+            if (newBallot.isGreaterThan(currentBallot)) {
                 state.setBallot(newBallot);
             }
 
@@ -797,6 +898,9 @@ public class ServerNode {
         long seqNum = acceptedMessage.getSequenceNumber();
 
         if (acceptedMessage != null && ballot.equals(state.getBallot())) {
+            logCommunication(
+                    String.format("MESSAGE: <ACCEPTED, <%d, %s>, %d> received from server %s", ballot.getTerm(), ballot.getServerId(), seqNum, acceptedMessage.getSenderId())
+            );
             logger.info("MESSAGE: <ACCEPTED> from {}: seq={}", acceptedMessage.getSenderId(), seqNum);
 
             logExecutor.submit(() -> {
@@ -809,8 +913,8 @@ public class ServerNode {
                 }
 
                 // Check if already committed
-                if (entry.isCommitted() || entry.isExecuted()) {
-                    logger.debug("Entry at seq={} already committed or executed, ignoring ACCEPTED", seqNum);
+                if (entry.isCommitted() || entry.isExecuted() || requestsCommitted.containsKey(getRequestKey(entry.getRequest()))) {
+                    logger.info("Entry at seq={} already committed or executed, ignoring ACCEPTED", seqNum);
                     return;
                 }
 
@@ -832,62 +936,95 @@ public class ServerNode {
 
         MessageServiceOuterClass.CommitMessage commitMessage = MessageServiceOuterClass.CommitMessage.newBuilder().setRequest(request).setBallot(state.getBallot().toProtoBallot()).setSequenceNumber(seqNum).build();
 
+        logger.info("Broadcasting COMMIT to {} servers for seq={}", otherServerIds.size(), seqNum);
+
+        // Try direct execution in current thread as a test
+//        logger.info("TEST: Attempting direct (non-executor) ACCEPT send to first server...");
+//        if (!otherServerIds.isEmpty()) {
+//            String firstServer = otherServerIds.iterator().next();
+//            try {
+//                logger.info("Direct send to {} starting...", firstServer);
+//                comms.sendCommit(firstServer, commitMessage);
+//                logger.info("Direct send to {} completed!", firstServer);
+//            } catch (Exception e) {
+//                logger.error("Direct send to {} failed: {}", firstServer, e.getMessage(), e);
+//            }
+//        }
+
         for (String targetServerId : otherServerIds) {
             // Use network executor for I/O-bound operations
             networkExecutor.submit(() -> comms.sendCommit(targetServerId, commitMessage));
         }
+
+        requestsCommitted.put(getRequestKey(request), true);
+
+        // Debug executor state AFTER submitting
+//        logger.info("Executor state after submission:");
+//        debugNetworkExecutor();
+
+        logger.info("========== broadcastCommit finished ==========");
     }
 
     public void handleCommitMessage(MessageServiceOuterClass.CommitMessage commitMessage) {
         long seqNum = commitMessage.getSequenceNumber();
         Ballot commitBallot = Ballot.fromProtoBallot(commitMessage.getBallot());
 
+        if (state.isLeader() && requestTimer.isRunning()) {
+            logger.info("Live leader received COMMIT message - ignoring");
+            return;
+        }
+
+        requestsAccepted.put(getRequestKey(commitMessage.getRequest()), seqNum);
+
         // Submit to log executor for thread-safe log modification
         logExecutor.submit(() -> {
             LogEntry entry = log.getLogEntry(seqNum);
 
-            if (entry == null) {
-                logger.warn("Received COMMIT for non-existent log entry at seq={}", seqNum);
-                // Add the entry from the commit message
-                log.add(commitMessage.getRequest(), commitBallot);
-                entry = log.getLogEntry(seqNum);
-            }
+            if (commitBallot.isGreaterThanOrEqual(state.getBallot())) {
+                if (entry == null) {
+                    logger.warn("Received COMMIT for non-existent log entry at seq={}", seqNum);
+                    // Add the entry from the commit message
+                    log.setLogEntry(seqNum, commitBallot, commitMessage.getRequest());
+                    clientState.setTimestamp(commitMessage.getRequest().getClientId(), commitMessage.getRequest().getTimestamp());
+                    logger.info("Added missing log entry at seq={} from COMMIT message", seqNum);
+                    entry = log.getLogEntry(seqNum);
+                }
 
-            if (entry != null && !entry.isCommitted() && commitBallot.isGreaterThanOrEqual(state.getBallot())) {
+                if (entry != null && !entry.isCommitted()) {
+                    log.updateToCommitted(seqNum);
+                    logger.info("Marked seq={} as committed", seqNum);
 
-                log.updateToCommitted(seqNum);
-                logger.info("Marked seq={} as committed", seqNum);
-
-                // Execute all committed entries in order
-                executeAllCommittedInOrder();
-            } else if (entry != null) {
-                logger.debug("Entry at seq={} already committed", seqNum);
+                    // Execute all committed entries in order
+                    executeAllCommittedInOrder();
+                } else if (entry != null) {
+                    logger.debug("Entry at seq={} already committed", seqNum);
+                }
             }
         });
     }
 
-    private Boolean attemptExecute(LogEntry currentEntry) {
-        logger.info("Attempting to execute transaction at sequence number {}", currentEntry.getSequenceNumber());
-
-        long currentSeqNum = currentEntry.getSequenceNumber();
-
-        if (currentEntry.isExecuted()) {
-            logger.info("{} already executed", currentSeqNum);
-            return null;
-        }
-
-        if (currentSeqNum == 1) {
-            if (currentEntry.isCommitted()) return executeTransaction(currentEntry.getRequest());
-            else return null;
-        }
-
-        long previousSeqNum = currentSeqNum - 1;
-        if (log.isExecuted(previousSeqNum) && currentEntry.isCommitted()) {
-            boolean result = executeTransaction(currentEntry.getRequest());
-            log.updateToExecuted(currentSeqNum);
-            return result;
-        } else return attemptExecute(log.getLogEntry(previousSeqNum));
-    }
+//    private Boolean attemptExecute(LogEntry currentEntry) {
+//        logger.info("Attempting to execute transaction at sequence number {}", currentEntry.getSequenceNumber());
+//
+//        long currentSeqNum = currentEntry.getSequenceNumber();
+//
+//        if (currentEntry.isExecuted()) {
+//            logger.info("{} already executed", currentSeqNum);
+//            return null;
+//        }
+//
+//        if (currentSeqNum == 1) {
+//            if (currentEntry.isCommitted()) return executeTransaction(currentEntry.getRequest());
+//            else return null;
+//        }
+//
+//        long previousSeqNum = currentSeqNum - 1;
+//        if (log.isExecuted(previousSeqNum) && currentEntry.isCommitted()) {
+//            boolean result = executeTransaction(currentEntry.getRequest());
+//            log.updateToExecuted(currentSeqNum);
+//            return result;
+//        } else return attemptExecute(log.getLogEntry(previousSeqNum));
+//    }
 
     /**
      * Execute all committed entries in sequential order.
@@ -908,6 +1045,7 @@ public class ServerNode {
             // Stop if we've reached an entry that doesn't exist yet
             if (entry == null) {
                 logger.debug("No entry at seq={}, stopping execution", nextSeq);
+                // TODO: Implement catchup logic here if needed
                 break;
             }
 
@@ -948,6 +1086,7 @@ public class ServerNode {
 
             // Handle client reply if this was a pending request
             String requestKey = Log.getRequestKey(entry.getRequest());
+            logger.info("Looking for request {} in pending requests to reply", requestKey);
             if (pendingRequests.containsKey(requestKey)) {
                 logger.info("Replying to pending request: {}", requestKey);
                 networkExecutor.submit(() -> replyToPendingClientRequest(result, requestKey));
@@ -967,9 +1106,6 @@ public class ServerNode {
         logger.info("Executing transaction: {} -> {} (amount: {})", transaction.getSender(), transaction.getReceiver(), transaction.getAmount());
 
         try {
-            if (pendingRequests.isEmpty()) {
-                requestTimer.stop();
-            } else requestTimer.startOrRefresh();
             // Perform the transfer
             boolean result = clientState.transferBalance(transaction);
 
@@ -1007,8 +1143,7 @@ public class ServerNode {
             replyToClientRequest(result, pendingRequest.request(), pendingRequest.responseObserver());
         }
 
-//        remove from pendingRequests
-        pendingRequests.remove(requestKey);
+        removeFromPendingRequests(requestKey);
     }
 
     private void replyToClientRequest(boolean result, MessageServiceOuterClass.
@@ -1088,6 +1223,32 @@ public class ServerNode {
         timerBeforePrepare.shutdown();
         requestTimer.shutdown();
 
+        Future<?> logSaveFuture = logExecutor.submit(log::save);
+
+        try {
+            logSaveFuture.get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.error("Log save interrupted during shutdown: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            logger.error("Error saving log during shutdown: {}", e.getMessage());
+        } catch (TimeoutException e) {
+            logger.error("Timeout saving log during shutdown");
+        }
+
+        Future<?> stateSaveFuture = stateExecutor.submit(clientState::save);
+
+        try {
+            stateSaveFuture.get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.error("Client state save interrupted during shutdown: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            logger.error("Error saving client state during shutdown: {}", e.getMessage());
+        } catch (TimeoutException e) {
+            logger.error("Timeout saving client state during shutdown");
+        }
+
         shutdownExecutor(networkExecutor, "Network");
         shutdownExecutor(streamingExecutor, "Streaming");
         shutdownExecutor(messageExecutor, "Message");
@@ -1132,12 +1293,12 @@ public class ServerNode {
                 logger.error("PROBLEM: Threads are active but no tasks completing - likely DEADLOCK or BLOCKING!");
             }
 
-            if (tpe.getQueue().size() > 0 && tpe.getActiveCount() < tpe.getCorePoolSize()) {
+            if (!tpe.getQueue().isEmpty() && tpe.getActiveCount() < tpe.getCorePoolSize()) {
                 logger.error("PROBLEM: Tasks queued but threads not picking them up - thread creation issue!");
             }
 
             // Dump thread stack traces
-            dumpNetworkExecutorThreads();
+//            dumpNetworkExecutorThreads();
         } else {
             logger.warn("NetworkExecutor is not a ThreadPoolExecutor, limited diagnostics available");
             logger.info("  Type: {}", networkExecutor.getClass().getName());
@@ -1230,8 +1391,8 @@ public class ServerNode {
 
     private ExecutorService createMonitoredNetworkExecutor() {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(
-                Math.max(10, OTHER_SERVER_COUNT * 2),  // core pool size
-                Math.max(10, OTHER_SERVER_COUNT * 2),  // max pool size
+                Math.max(50, OTHER_SERVER_COUNT * 2),  // core pool size
+                Math.max(50, OTHER_SERVER_COUNT * 2),  // max pool size
                 60L, TimeUnit.SECONDS,                  // keep alive time
                 new LinkedBlockingQueue<>(),            // work queue
                 createNamedThreadFactory("network-io")
@@ -1283,5 +1444,9 @@ public class ServerNode {
         Runtime.getRuntime().addShutdownHook(new Thread(serverNode::shutdown));
 
         serverNode.start();
+    }
+
+    public ClientState getClientState() {
+        return clientState;
     }
 }

@@ -1,5 +1,6 @@
 package org.example;
 
+import com.google.protobuf.Empty;
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import org.apache.logging.log4j.LogManager;
@@ -10,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 import static org.example.ChannelManager.createOrGetChannel;
-import static org.example.Config.getMaxRetries;
 
 public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
@@ -20,18 +20,21 @@ public class Client {
     private final HashMap<String, ManagedChannel> channels; // [channels]: Map of server ids and their gRPC channels
     private final HashMap<String, MessageServiceGrpc.MessageServiceBlockingStub> stubs; // [stubs]: Map of server ids and their gRPC stubs
     //    private final HashMap<String, MessageServiceOuterClass.ClientReply> history; // [history]: Map of old requests sent and replies received - #TODO Create a record for each history item
+    private final ExecutorService networkExecutor;
 
     public Client(String clientId) {
         this.clientId = clientId;
-        this.channels = new HashMap<>();
+        this.channels = ChannelManager.getChannels(null);
         this.stubs = new HashMap<>();
         this.servers = new HashMap<>();
         this.leaderId = "n1";
 
+
         try {
             this.servers = Config.getServers();
+            this.networkExecutor = Executors.newCachedThreadPool(); // Thread pool for handling network operations
         } catch (Exception e) {
-            logger.error("Client {}: Failed to load server details from path defined in config.properties : {}", clientId, e.getMessage());
+//            logger.error("Client {}: Failed to load server details from path defined in config.properties : {}", clientId, e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -51,14 +54,13 @@ public class Client {
         return MessageServiceOuterClass.ClientRequest.newBuilder().setTransaction(transaction).setTimestamp(timestamp).setClientId(transaction.getSender()).build();
     }
 
-
 //    Stub management methods
 
     private MessageServiceGrpc.MessageServiceBlockingStub createStub(String serverId) {
-        ManagedChannel channel = createOrGetChannel(serverId);
+        ManagedChannel channel = channels.get(serverId);
         MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
         stubs.put(serverId, stub);
-        logger.info("Client {}: Initialized gRPC stub for server {}", clientId, serverId);
+//        logger.info("Client {}: Initialized gRPC stub for server {}", clientId, serverId);
         return stub;
     }
 
@@ -73,66 +75,83 @@ public class Client {
         return createStub(serverId);
     }
 
-    /**
-     * Sends a ClientRequest to the specified server using a provided gRPC ManagedChannel, waits for a response with a timeout,
-     * and retries if no response is received. Retries up to maxRetries times.
-     *
-     * @param request       The ClientRequest to send
-     * @param serverId      The target server's ID (for logging only)
-     * @return The server's response, or null if all retries fail
-     */
-    private MessageServiceOuterClass.ClientReply sendClientRequestWithRetry(MessageServiceOuterClass.ClientRequest request, String serverId) {
-        int maxRetries = Config.getMaxRetries();
-        long timeoutMillis = Config.getClientTimeoutMillis();
+    // Leader failure
 
-        int attempt = 0;
+    public static void broadcastFailLeader() {
+        Map<String, ServerDetails> servers = Config.getServers();
 
-        while (attempt <= maxRetries) {
-            attempt++;
-//            Creating a thread to enforce timeout using future.get
-            try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-                MessageServiceGrpc.MessageServiceBlockingStub stub = createOrGetStub(serverId);
-                logger.info("Client {}: Sending ClientRequest to server {} (attempt {}/{})", clientId, serverId, attempt, maxRetries + 1);
-                Future<MessageServiceOuterClass.ClientReply> future = executor.submit(() -> stub.request(request));
-                try {
-                    MessageServiceOuterClass.ClientReply reply = future.get(timeoutMillis, TimeUnit.MILLISECONDS);
-                    logger.info("Client {}: Received reply from server {}: {}", clientId, serverId, reply);
-                    return reply;
-                } catch (TimeoutException e) {
-                    logger.warn("Client {}: Timeout waiting for reply from server {} (attempt {}/{}). Retrying...", clientId, serverId, attempt, maxRetries + 1);
-                    future.cancel(true);
-                } catch (ExecutionException | InterruptedException e) {
-                    logger.error("Client {}: Error while waiting for reply from server {}: {}", clientId, serverId, e.getMessage());
+        for (String serverId : servers.keySet()) {
+            try {
+                ManagedChannel channel = createOrGetChannel(serverId);
+                MessageServiceGrpc.MessageServiceBlockingStub stub = MessageServiceGrpc.newBlockingStub(channel);
+                MessageServiceOuterClass.Acknowledgement ack = stub.failLeader(Empty.getDefaultInstance());
+                if (ack.getStatus()) {
+//                    System.out.println("Server " + serverId + " acknowledged leader failure.");
+                    break; // Exit loop on first successful acknowledgment
+                } else {
+//                    System.err.println("Server " + serverId + " failed to acknowledge leader failure.");
                 }
-            } catch (StatusRuntimeException e) {
-                logger.error("Client {}: gRPC error communicating with server {}: {}", clientId, serverId, e.getMessage());
+            } catch (RuntimeException e) {
+                System.err.println("Error when sending failLeader to server " + serverId + ": " + e.getMessage());
             }
         }
-        logger.error("Client {}: Failed to receive reply from server {} after {} attempts.", clientId, serverId, maxRetries + 1);
+    }
+
+//    Client request methods
+
+    // Send client request once with timeout
+    private MessageServiceOuterClass.ClientReply sendClientRequestWithTimeout(MessageServiceOuterClass.ClientRequest request, String serverId) {
+        try {
+            MessageServiceGrpc.MessageServiceBlockingStub stub = createOrGetStub(serverId);
+            logger.info("Client {}: Sending ClientRequest ({}, {}, {}) to server {} with timeout {} ms", clientId,
+                    request.getTransaction().getSender(), request.getTransaction().getReceiver(), request.getTransaction().getAmount(), serverId, Config.getClientTimeoutMillis());
+            MessageServiceOuterClass.ClientReply reply = stub.withDeadlineAfter(Config.getClientTimeoutMillis(), TimeUnit.MILLISECONDS).request(request);
+//            logger.info("Client {}: Received reply from server {}: {}", clientId, serverId, reply);
+            return reply;
+        } catch (StatusRuntimeException e) {
+            logger.error("Client {}: gRPC error when sending request one node communicating with server {} for request ({}, {}, {}): {}", clientId, request.getTransaction().getSender(), request.getTransaction().getReceiver(), request.getTransaction().getAmount(), serverId, e.getMessage());
+        }
         return null;
     }
 
     public void processTransaction(MessageServiceOuterClass.Transaction transaction) {
         MessageServiceOuterClass.ClientRequest request = generateClientRequest(transaction);
-        if (leaderId == null) {
-            parseServerReply(broadcastRequest(request));
-        } else {
-            parseServerReply(sendClientRequestWithRetry(request, leaderId));
+
+        boolean retry = true;
+
+        while(retry) {
+            if (leaderId != null) {
+                if (parseServerReply(sendClientRequestWithTimeout(request, leaderId))) {
+                    retry = false;
+                } else {
+                    logger.info("Client {}: Retrying transaction with broadcast due to failed reply from leader {}", clientId, leaderId);
+                }
+            } else {
+//                logger.info("Client {}: No known leader. Broadcasting request.", clientId);
+                if (parseServerReply(broadcastRequest(request))) {
+                    retry = false;
+                } else {
+                    logger.info("Client {}: Retrying transaction with broadcast due to no replies.", clientId);
+                }
+            }
         }
+
         logger.info("Client {}: Processed transaction: ({}, {}, {})", clientId, transaction.getSender(), transaction.getReceiver(), transaction.getAmount());
     }
 
-    private void parseServerReply(MessageServiceOuterClass.ClientReply reply) {
+    private boolean parseServerReply(MessageServiceOuterClass.ClientReply reply) {
         if (reply != null) {
             if (reply.getResult()) {
                 logger.info("Client {}: Transaction successful.", clientId);
                 this.leaderId = reply.getSenderId();
-                logger.info("Client {}: Updated leader ID to node {}.", clientId, leaderId);
+//                logger.info("Client {}: Updated leader ID to node {}.", clientId, leaderId);
             }
             else logger.info("Client {}: Transaction failed.", clientId);
+            return true;
         } else {
             this.leaderId = null;
-            logger.error("Client {}: Client received no reply.", clientId);
+//            logger.error("Client {}: Client received no reply.", clientId);
+            return false;
         }
     }
 
@@ -140,8 +159,8 @@ public class Client {
 
         int serverCount = servers.size();
 
-        try (ExecutorService executor = Executors.newFixedThreadPool(serverCount)) {
-            CompletionService<MessageServiceOuterClass.ClientReply> completionService = new ExecutorCompletionService<>(executor);
+        try {
+            CompletionService<MessageServiceOuterClass.ClientReply> completionService = new ExecutorCompletionService<>(networkExecutor);
             for (final String serverId : servers.keySet()) {
                 completionService.submit(new SendRequestCallable(request, serverId));
             }
@@ -150,11 +169,10 @@ public class Client {
                 Future<MessageServiceOuterClass.ClientReply> future = completionService.take();
                 try {
 //                    Return the very first reply from the broadcast
-//                    TODO: Grab replies from all threads and check if all are consistent
-                    executor.shutdownNow(); // Do I need this here?
+//                    networkExecutor.shutdownNow(); // Do I need this here?
                     return future.get();
                 } catch (InterruptedException | ExecutionException e) {
-                    logger.error("Client {}: Error while waiting for broadcast reply.", clientId, e);
+//                    logger.error("Client {}: Error while waiting for broadcast reply.", clientId, e);
                     throw new RuntimeException(e);
                 }
             }
@@ -163,7 +181,6 @@ public class Client {
         }
 
         return null;
-
     }
 
     private class SendRequestCallable implements Callable<MessageServiceOuterClass.ClientReply> {
@@ -179,8 +196,8 @@ public class Client {
         @Override
         public MessageServiceOuterClass.ClientReply call() throws Exception {
             try {
-                logger.info("Client {}: Broadcasting request to server {}.", clientId, serverId);
-                return sendClientRequestWithRetry(request, serverId);
+                logger.info("Client {}: Broadcasting request ({}, {}, {}) to server {}.", clientId, request.getTransaction().getSender(), request.getTransaction().getReceiver(), request.getTransaction().getAmount(), serverId);
+                return sendClientRequestWithTimeout(request, serverId);
             } catch (Exception e) {
                 logger.error("Client {}: Error broadcasting request to server {} : {}", clientId, serverId, e.getMessage());
             }
@@ -197,17 +214,17 @@ public class Client {
 //                executor.submit(() -> {
 //                    try {
 //                        Client client = new Client();
-//                        logger.info("CClient {}: lient initialized");
+////                        logger.info("CClient {}: lient initialized");
 //                        long timestamp = System.currentTimeMillis();
 //                        MessageServiceOuterClass.ClientRequest request = generateClientRequest(clientId, "B", 10.0, timestamp);
 //                        MessageServiceOuterClass.ClientReply reply = client.sendClientRequestWithRetry(request, "1", 500, 2);
 //                    } catch (Exception e) {
-//                        logger.error("EClient {}: rror initializing client {} : {}", e.getMessage());
+////                        logger.error("EClient {}: rror initializing client {} : {}", e.getMessage());
 //                    }
 //                });
 //            }
 //        } catch (Exception e) {
-//            logger.error("EClient {}: rror in spawning multiple threads for clients : {}", e.getMessage());
+////            logger.error("EClient {}: rror in spawning multiple threads for clients : {}", e.getMessage());
 //        }
 
     }

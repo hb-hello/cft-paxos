@@ -140,6 +140,11 @@ public class Config {
 
     public static Set<String> getServerIdsExcept(String serverId) {
         ensureInitialized();
+
+        if (serverId == null) {
+            return getServerIds();
+        }
+
         return servers.keySet().stream().filter(server -> !Objects.equals(server, serverId)).collect(Collectors.toSet());
     }
 

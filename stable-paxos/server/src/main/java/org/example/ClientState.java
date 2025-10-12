@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -26,6 +27,10 @@ public class ClientState {
         this.initialize();
     }
 
+    public Map<String, StateEntry> getClientState() {
+        return new HashMap<>(clientState);
+    }
+
     private void initialize() {
         try {
             Map<String, Double> clientDetails = Config.getClientBalances();
@@ -39,9 +44,10 @@ public class ClientState {
         }
     }
 
-    private void save() {
+    public void save() {
         try {
             saveState(serverId, clientState);
+            logger.info("Saved client state to JSON file for server {}", serverId);
         } catch (IOException e) {
             logger.error("Server {}: Error saving state to JSON file : {}", serverId, e.getMessage());
             throw new RuntimeException(e);

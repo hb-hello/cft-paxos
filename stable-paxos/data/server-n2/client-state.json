@@ -1,41 +1,41 @@
 [ {
   "clientId" : "A",
-  "bankBalance" : 15.0,
-  "lastTimestampRepliedTo" : 1760083762959
+  "bankBalance" : 10.0,
+  "lastTimestampRepliedTo" : 1760227078468
 }, {
   "clientId" : "B",
-  "bankBalance" : 8.0,
-  "lastTimestampRepliedTo" : 1760083762959
+  "bankBalance" : 9.0,
+  "lastTimestampRepliedTo" : 1760227078366
 }, {
   "clientId" : "C",
-  "bankBalance" : 14.0,
-  "lastTimestampRepliedTo" : 1760083762959
+  "bankBalance" : 5.0,
+  "lastTimestampRepliedTo" : 1760227078352
 }, {
   "clientId" : "D",
-  "bankBalance" : 12.0,
-  "lastTimestampRepliedTo" : 0
+  "bankBalance" : 14.0,
+  "lastTimestampRepliedTo" : 1760227078605
 }, {
   "clientId" : "E",
-  "bankBalance" : 1.0,
-  "lastTimestampRepliedTo" : 1760083768053
+  "bankBalance" : 8.0,
+  "lastTimestampRepliedTo" : 1760227078585
 }, {
   "clientId" : "F",
-  "bankBalance" : 10.0,
-  "lastTimestampRepliedTo" : 0
+  "bankBalance" : 9.0,
+  "lastTimestampRepliedTo" : 1760227078638
 }, {
   "clientId" : "G",
-  "bankBalance" : 10.0,
-  "lastTimestampRepliedTo" : 0
+  "bankBalance" : 7.0,
+  "lastTimestampRepliedTo" : 1760227078826
 }, {
   "clientId" : "H",
-  "bankBalance" : 10.0,
-  "lastTimestampRepliedTo" : 0
+  "bankBalance" : 17.0,
+  "lastTimestampRepliedTo" : 1760227078350
 }, {
   "clientId" : "I",
-  "bankBalance" : 10.0,
-  "lastTimestampRepliedTo" : 0
+  "bankBalance" : 12.0,
+  "lastTimestampRepliedTo" : 1760227078369
 }, {
   "clientId" : "J",
-  "bankBalance" : 10.0,
-  "lastTimestampRepliedTo" : 0
+  "bankBalance" : 9.0,
+  "lastTimestampRepliedTo" : 1760227078826
 } ]

@@ -46,7 +46,7 @@ public class LogLoader {
                 jsonArray.add(entryNode);
             }
             mapper.writeValue(new File(filePath), jsonArray);
-            logger.info("Successfully saved {} log entries to {}", logEntries.size(), filePath);
+//            logger.info("Successfully saved {} log entries to {}", logEntries.size(), filePath);
         } catch (IOException e) {
             logger.error("Failed to save log entries to file {}: {}", filePath, e.getMessage());
             throw new RuntimeException("Failed to save log entries", e);

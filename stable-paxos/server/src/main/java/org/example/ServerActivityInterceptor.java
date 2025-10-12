@@ -7,6 +7,8 @@ import io.grpc.ServerInterceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ServerActivityInterceptor implements ServerInterceptor {
@@ -14,7 +16,7 @@ public class ServerActivityInterceptor implements ServerInterceptor {
     private final static Logger logger = LogManager.getLogger(ServerActivityInterceptor.class);
 
     private final AtomicBoolean activeFlag = new AtomicBoolean(false);
-    private static final String ALLOWED_METHOD = "MessageService/setActiveFlag";
+    private static final List<String> ALLOWED_METHODS = Arrays.asList("MessageService/SetActiveFlag", "MessageService/GetDB", "MessageService/GetStatus", "MessageService/GetLog", "MessageService/GetNewViews");
 
     public void setActiveFlag(boolean active) {
         activeFlag.set(active);
@@ -33,7 +35,7 @@ public class ServerActivityInterceptor implements ServerInterceptor {
             String fullMethodName = call.getMethodDescriptor().getFullMethodName();
 
             // Only setActiveFLag method is allowed when server is inactive
-            if (ALLOWED_METHOD.equals(fullMethodName)) {
+            if (ALLOWED_METHODS.contains(fullMethodName)) {
                 // For the allowed request, continue the call chain.
                 return next.startCall(call, headers);
             } else {

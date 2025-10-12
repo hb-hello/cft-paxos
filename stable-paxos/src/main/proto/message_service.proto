@@ -14,9 +14,17 @@ service MessageService {
   rpc Commit (CommitMessage) returns (google.protobuf.Empty) {};
   rpc ForwardClientRequest (ClientRequest) returns (google.protobuf.Empty) {};
 
-  rpc setActiveFlag (ActiveFlag) returns (Acknowledgement) {};
+  rpc SetActiveFlag (ActiveFlag) returns (Acknowledgement) {};
 
-  rpc sendCheckpoint(CheckpointMessage) returns (Acknowledgement);
+  rpc SendCheckpoint(CheckpointMessage) returns (Acknowledgement);
+
+  rpc FailLeader(google.protobuf.Empty) returns (Acknowledgement);
+
+  // for cli
+  rpc GetLog(google.protobuf.Empty) returns (CLIResponse) {};
+  rpc GetDB(google.protobuf.Empty) returns (CLIResponse) {};
+  rpc GetStatus(SequenceNumber) returns (CLIResponse) {};
+  rpc GetNewViews(google.protobuf.Empty) returns (CLIResponse) {};
 }
 
 // CLI to server request
@@ -27,6 +35,14 @@ message ActiveFlag {
 
 message Acknowledgement {
     bool status = 1;
+}
+
+message SequenceNumber {
+    int64 sequence_number = 1;
+}
+
+message CLIResponse {
+    string cli_response = 1;
 }
 
 // Client - server connections

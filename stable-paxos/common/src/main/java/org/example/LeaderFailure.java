@@ -1,0 +1,11 @@
+package org.example;
+
+public class LeaderFailure implements TransactionEvent {
+    @Override
+    public String getEventType() { return "LEADER_FAILURE"; }
+
+    @Override
+    public String toString() {
+        return "LeaderFailure()";
+    }
+}

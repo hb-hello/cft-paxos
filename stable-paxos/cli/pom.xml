@@ -39,7 +39,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.CliApp</mainClass>
+                            <mainClass>org.example.InteractiveCLI</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

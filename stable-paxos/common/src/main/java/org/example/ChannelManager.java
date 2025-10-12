@@ -50,4 +50,11 @@ public class ChannelManager {
         return createChannel(serverId);
     }
 
+    public static HashMap<String, ManagedChannel> getChannels(String exceptServerId) {
+        for (String serverId : Config.getServerIdsExcept(exceptServerId)) {
+            createOrGetChannel(serverId);
+        }
+        return new HashMap<>(channels);
+    }
+
 }

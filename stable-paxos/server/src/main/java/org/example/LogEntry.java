@@ -52,6 +52,10 @@ public final class LogEntry {
         return ballot;
     }
 
+    public void setBallot(Ballot newBallot) {
+        this.ballot.setBallot(newBallot.getTerm(), newBallot.getServerId());
+    }
+
     public MessageServiceOuterClass.ClientRequest getRequest() {
         return request;
     }
@@ -62,6 +66,7 @@ public final class LogEntry {
 
     public void setStatus(Status newStatus) {
         this.status.set(newStatus);
+        System.out.println("LogEntry: Sequence Number " + sequenceNumber + " status updated to " + newStatus);
     }
 
     public boolean isAccepted() {
@@ -83,7 +88,7 @@ public final class LogEntry {
         var that = (LogEntry) obj;
         return this.sequenceNumber == that.sequenceNumber &&
                 this.acceptedVotes.get() == that.acceptedVotes.get() &&
-                Objects.equals(this.status, that.status) &&
+                Objects.equals(this.status.get(), that.status.get()) &&
                 Objects.equals(this.ballot, that.ballot) &&
                 Objects.equals(this.request, that.request);
     }

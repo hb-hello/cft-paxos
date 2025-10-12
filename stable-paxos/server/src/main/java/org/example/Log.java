@@ -45,7 +45,7 @@ public class Log {
         return nextUnexecutedSequence.get();
     }
 
-    private void save() {
+    public void save() {
         try {
             long currentSeq = sequenceNumber.get();
 //            long lastSaved = lastSavedSequenceNumber.get();
@@ -75,20 +75,19 @@ public class Log {
 //    }
 
     public long add(MessageServiceOuterClass.ClientRequest request, Ballot ballot) {
-        logger.info("Adding transaction {} to log.", request.getTransaction());
+//        logger.info("Adding transaction {} to log.", request.getTransaction());
         String requestKey = getRequestKey(request);
+        // Use computeIfAbsent to ensure atomicity
+
         if (requestIds.containsKey(requestKey)) {
             return requestIds.get(requestKey);
-        } else {
-            long seqNum = sequenceNumber.incrementAndGet();
-            LogEntry logEntry = new LogEntry(seqNum, 0, Status.ACCEPTED, ballot, request);
-            log.put(seqNum, logEntry);
-            requestIds.put(requestKey, seqNum);
-
-//        trigger async save
-            this.saveExecutor.submit(this::save);
-            return seqNum;
         }
+
+        long seqNum = sequenceNumber.incrementAndGet();
+        setLogEntry(seqNum, ballot, request);
+        requestIds.put(requestKey, seqNum);
+        logger.info("Added transaction {} to log at sequence number {}.", request.getTransaction(), seqNum);
+        return seqNum;
     }
 
     public int incrementVotes(long seqNum) {
@@ -101,7 +100,7 @@ public class Log {
     public void updateToCommitted(long seqNum) {
         logger.info("Updating status to committed for sequence number {}", seqNum);
         LogEntry logEntry = log.get(seqNum);
-        if (logEntry != null) {
+        if (logEntry != null && !logEntry.isExecuted()) {
             logEntry.setStatus(Status.COMMITTED);
             this.saveExecutor.submit(this::save);
         }
@@ -120,8 +119,7 @@ public class Log {
         nextUnexecutedSequence.compareAndSet(seqNum, seqNum + 1);
 
         saveExecutor.submit(this::save);
-        logger.info("Marked seq={} as EXECUTED. Next unexecuted: {}",
-                seqNum, nextUnexecutedSequence.get());
+        logger.info("Marked seq={} as EXECUTED. Next unexecuted: {}", seqNum, nextUnexecutedSequence.get());
         return true;
     }
 
@@ -130,28 +128,52 @@ public class Log {
     }
 
     public void setLogEntry(long seqNum, Ballot ballot, MessageServiceOuterClass.ClientRequest request) {
-        LogEntry newLogEntry = new LogEntry(seqNum, 0, Status.ACCEPTED, ballot, request);
-        log.put(seqNum, newLogEntry);
-        logger.info("Set log entry at sequence number = {}", sequenceNumber);
+        LogEntry existingEntry = log.get(seqNum);
+
+        if (existingEntry != null) {
+            if (existingEntry.getBallot().isGreaterThanOrEqual(ballot)) {
+                logger.warn("Existing log entry at seqNum {} has higher or equal ballot. Not updating.", seqNum);
+                return;
+            }
+            logger.info("Updating existing log entry at seqNum {} with higher ballot.", seqNum);
+            existingEntry.setBallot(ballot);
+            // existingEntry.setRequest(request);
+        } else {
+            logger.info("Setting new log entry at seqNum {}.", seqNum);
+            LogEntry newLogEntry = new LogEntry(seqNum, 0, Status.ACCEPTED, ballot, request);
+            log.put(seqNum, newLogEntry);
+            requestIds.put(getRequestKey(request), seqNum);
+        }
+
+        // Ensure sequenceNumber always reflects the highest known sequence number.
+        sequenceNumber.updateAndGet(current -> Math.max(current, seqNum));
+
         this.saveExecutor.submit(this::save);
     }
 
     public List<MessageServiceOuterClass.AcceptMessage> getAcceptLog() {
-
         List<MessageServiceOuterClass.AcceptMessage> acceptLog = new ArrayList<>();
-        for (long i = 1; i <= sequenceNumber.get(); i++) {
+        long maxSeq = sequenceNumber.get();
+
+        // **MODIFICATION 3: Make loop robust against non-contiguous logs**
+        for (long i = 1; i <= maxSeq; i++) {
             LogEntry logEntry = log.get(i);
-            MessageServiceOuterClass.AcceptMessage acceptLogEntry = MessageServiceOuterClass.AcceptMessage.newBuilder()
-                    .setBallot(logEntry.getBallot().toProtoBallot())
-                    .setSequenceNumber(i)
-                    .setRequest(logEntry.getRequest())
-                    .build();
-            acceptLog.add(acceptLogEntry);
+            if (logEntry != null) { // Check for null in case of gaps in the log
+                MessageServiceOuterClass.AcceptMessage acceptLogEntry = MessageServiceOuterClass.AcceptMessage.newBuilder()
+                        .setBallot(logEntry.getBallot().toProtoBallot())
+                        .setSequenceNumber(i)
+                        .setRequest(logEntry.getRequest())
+                        .build();
+                acceptLog.add(acceptLogEntry);
+            }
         }
         return acceptLog;
     }
 
     public Status getStatus(long sequenceNumber) {
+        if (!log.containsKey(sequenceNumber)) {
+            return Status.NONE;
+        }
         return log.get(sequenceNumber).getStatus();
     }
 
@@ -188,6 +210,10 @@ public class Log {
         for (long i = 1; i <= sequenceNumber.get(); i++) {
             System.out.println(log.get(i));
         }
+    }
+
+    public Map<Long, LogEntry> getLog() {
+        return new HashMap<>(log);
     }
 
 }

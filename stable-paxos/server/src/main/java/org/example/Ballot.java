@@ -17,9 +17,7 @@ public class Ballot {
     }
 
     public int getTerm() {
-        synchronized (lock) {
             return protoBallot.getInstance();
-        }
     }
 
     public void setTerm(int term) {
@@ -29,9 +27,7 @@ public class Ballot {
     }
 
     public String getServerId() {
-        synchronized (lock) {
             return protoBallot.getSenderId();
-        }
     }
 
     public void setServerId(String serverId) {
@@ -43,7 +39,7 @@ public class Ballot {
     public void setBallot(int term, String serverId) {
         synchronized (lock) {
             System.out.println("Setting ballot to " + term + ", " + serverId);
-            this.protoBallot = protoBallot.toBuilder().setInstance(term).setSenderId(serverId).build();
+            this.protoBallot = MessageServiceOuterClass.Ballot.newBuilder().setInstance(term).setSenderId(serverId).build();
         }
     }
 
@@ -64,27 +60,21 @@ public class Ballot {
     }
 
     public boolean isGreaterThan(Ballot other) {
-        int thisTerm, otherTerm;
-        String thisServerId, otherServerId;
+        Object lock1 = System.identityHashCode(this) < System.identityHashCode(other) ? this.lock : other.lock;
+        Object lock2 = System.identityHashCode(this) < System.identityHashCode(other) ? other.lock : this.lock;
 
-        synchronized (this.lock) {
-            thisTerm = this.protoBallot.getInstance();
-            thisServerId = this.protoBallot.getSenderId();
-        }
+        synchronized (lock1) {
+            synchronized (lock2) {
+                // Read volatile fields after acquiring locks
+                MessageServiceOuterClass.Ballot thisProto = this.protoBallot;
+                MessageServiceOuterClass.Ballot otherProto = other.protoBallot;
 
-        synchronized (other.lock) {
-            otherTerm = other.protoBallot.getInstance();
-            otherServerId = other.protoBallot.getSenderId();
+                if (thisProto.getInstance() != otherProto.getInstance()) {
+                    return thisProto.getInstance() > otherProto.getInstance();
+                }
+                return thisProto.getSenderId().compareTo(otherProto.getSenderId()) > 0;
+            }
         }
-
-        if (thisTerm != otherTerm) {
-            return thisTerm > otherTerm;
-        }
-        boolean compare = thisServerId.compareTo(otherServerId) > 0;
-        if (compare) {
-            System.out.println(thisServerId + " is greater than " + otherServerId);
-        } else System.out.println(thisServerId + " is not greater than " + otherServerId);
-        return thisServerId.compareTo(otherServerId) > 0;
     }
 
     public boolean isGreaterThanOrEqual(Ballot other) {
@@ -103,6 +93,6 @@ public class Ballot {
 
     @Override
     public String toString() {
-        return '<' + protoBallot.getInstance() + ", " + protoBallot.getSenderId() + '>';
+        return "<" + protoBallot.getInstance() + ", " + protoBallot.getSenderId() + ">";
     }
 }
