@@ -92,67 +92,154 @@ public class Client {
 //                    System.err.println("Server " + serverId + " failed to acknowledge leader failure.");
                 }
             } catch (RuntimeException e) {
-                System.err.println("Error when sending failLeader to server " + serverId + ": " + e.getMessage());
+//                System.err.println("Error when sending failLeader to server " + serverId + ": " + e.getMessage());
             }
         }
+    }
+
+    private boolean isSuccess(MessageServiceOuterClass.ClientReply reply) {
+        return reply != null;
     }
 
 //    Client request methods
 
     // Send client request once with timeout
-    private MessageServiceOuterClass.ClientReply sendClientRequestWithTimeout(MessageServiceOuterClass.ClientRequest request, String serverId) {
+    private MessageServiceOuterClass.ClientReply sendClientRequestWithTimeout(
+            MessageServiceOuterClass.ClientRequest request, String serverId) {
         try {
-            MessageServiceGrpc.MessageServiceBlockingStub stub = createOrGetStub(serverId);
-            logger.info("Client {}: Sending ClientRequest ({}, {}, {}) to server {} with timeout {} ms", clientId,
-                    request.getTransaction().getSender(), request.getTransaction().getReceiver(), request.getTransaction().getAmount(), serverId, Config.getClientTimeoutMillis());
-            MessageServiceOuterClass.ClientReply reply = stub.withDeadlineAfter(Config.getClientTimeoutMillis(), TimeUnit.MILLISECONDS).request(request);
-//            logger.info("Client {}: Received reply from server {}: {}", clientId, serverId, reply);
-            return reply;
-        } catch (StatusRuntimeException e) {
-            logger.error("Client {}: gRPC error when sending request one node communicating with server {} for request ({}, {}, {}): {}", clientId, request.getTransaction().getSender(), request.getTransaction().getReceiver(), request.getTransaction().getAmount(), serverId, e.getMessage());
+            MessageServiceGrpc.MessageServiceBlockingStub stub = createStub(serverId)
+                    .withDeadlineAfter(500, TimeUnit.MILLISECONDS); // adjust as needed
+            return stub.request(request);
+        } catch (Exception e) {
+//            logger.warn("Client {}: RPC to {} failed", clientId, serverId);
+            return null;
         }
-        return null;
     }
 
-    public void processTransaction(MessageServiceOuterClass.Transaction transaction) {
-        MessageServiceOuterClass.ClientRequest request = generateClientRequest(transaction);
+//    public void processTransaction(MessageServiceOuterClass.Transaction transaction) {
+//        MessageServiceOuterClass.ClientRequest request = generateClientRequest(transaction);
+//
+//        boolean retry = true;
+//
+//        while(retry) {
+//            if (leaderId != null) {
+//                if (parseServerReply(sendClientRequestWithTimeout(request, leaderId))) {
+//                    retry = false;
+//                } else {
+//                    logger.info("Client {}: Retrying transaction with broadcast due to failed reply from leader {}", clientId, leaderId);
+//                }
+//            } else {
+////                logger.info("Client {}: No known leader. Broadcasting request.", clientId);
+//                if (parseServerReply(broadcastRequest(request))) {
+//                    retry = false;
+//                } else {
+//                    logger.info("Client {}: Retrying transaction with broadcast due to no replies.", clientId);
+//                }
+//            }
+//        }
+//
+//        logger.info("Client {}: Processed transaction: ({}, {}, {})", clientId, transaction.getSender(), transaction.getReceiver(), transaction.getAmount());
+//    }
 
-        boolean retry = true;
+public void processTransaction(MessageServiceOuterClass.Transaction transaction) {
+    MessageServiceOuterClass.ClientRequest request = generateClientRequest(transaction); // keep your existing builder
+    int attempt = 0;
 
-        while(retry) {
-            if (leaderId != null) {
-                if (parseServerReply(sendClientRequestWithTimeout(request, leaderId))) {
-                    retry = false;
-                } else {
-                    logger.info("Client {}: Retrying transaction with broadcast due to failed reply from leader {}", clientId, leaderId);
-                }
+    while (true) {
+        attempt++;
+
+        // 1) Try known leader with a short deadline
+        if (leaderId != null) {
+            MessageServiceOuterClass.ClientReply leaderReply = sendClientRequestWithTimeout(request, leaderId);
+            if (isSuccess(leaderReply)) {
+                this.leaderId = leaderReply.getSenderId(); // update only on success
+                logger.info("Client {}: success via leader {}", clientId, leaderId);
+                break;
             } else {
-//                logger.info("Client {}: No known leader. Broadcasting request.", clientId);
-                if (parseServerReply(broadcastRequest(request))) {
-                    retry = false;
-                } else {
-                    logger.info("Client {}: Retrying transaction with broadcast due to no replies.", clientId);
-                }
+//                logger.info("Client {}: leader {} attempt failed; falling back to broadcast", clientId, leaderId);
             }
         }
 
-        logger.info("Client {}: Processed transaction: ({}, {}, {})", clientId, transaction.getSender(), transaction.getReceiver(), transaction.getAmount());
+        // 2) Race a broadcast to all servers; first true wins and cancels the rest
+        MessageServiceOuterClass.ClientReply winner = broadcastUntilFirstSuccess(request);
+        if (isSuccess(winner)) {
+            this.leaderId = winner.getSenderId(); // promote the winning replier to leader
+            logger.info("Client {}: success via broadcast, new leader={}", clientId, leaderId);
+            break;
+        }
+
+        // 3) Backoff before retrying the round
+        long backoffMs = Math.min(1000L, 50L * (1L << Math.min(5, attempt)));
+        try { TimeUnit.MILLISECONDS.sleep(backoffMs); }
+        catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+//            throw new RuntimeException("Interrupted while retrying", ie);
+        }
     }
+
+    logger.info("Client {}: processed transaction ({}, {}, {})", clientId,
+            transaction.getSender(), transaction.getReceiver(), transaction.getAmount());
+}
 
     private boolean parseServerReply(MessageServiceOuterClass.ClientReply reply) {
         if (reply != null) {
             if (reply.getResult()) {
-                logger.info("Client {}: Transaction successful.", clientId);
+//                logger.info("Client {}: Transaction successful.", clientId);
                 this.leaderId = reply.getSenderId();
 //                logger.info("Client {}: Updated leader ID to node {}.", clientId, leaderId);
             }
-            else logger.info("Client {}: Transaction failed.", clientId);
+//            else logger.info("Client {}: Transaction failed.", clientId);
             return true;
         } else {
             this.leaderId = null;
 //            logger.error("Client {}: Client received no reply.", clientId);
             return false;
         }
+    }
+
+    private MessageServiceOuterClass.ClientReply broadcastUntilFirstSuccess(
+            MessageServiceOuterClass.ClientRequest request) {
+
+        CompletionService<MessageServiceOuterClass.ClientReply> cs =
+                new ExecutorCompletionService<>(networkExecutor);
+        java.util.concurrent.atomic.AtomicBoolean done = new java.util.concurrent.atomic.AtomicBoolean(false);
+        java.util.List<Future<MessageServiceOuterClass.ClientReply>> futures = new java.util.ArrayList<>();
+
+        for (final String serverId : servers.keySet()) {
+            futures.add(cs.submit(() -> {
+                if (done.get()) return null;
+                MessageServiceOuterClass.ClientReply r = sendClientRequestWithTimeout(request, serverId);
+                if (isSuccess(r) && done.compareAndSet(false, true)) {
+                    return r;
+                }
+                return null;
+            }));
+        }
+
+        MessageServiceOuterClass.ClientReply winner = null;
+        int remaining = futures.size();
+        while (remaining-- > 0 && !done.get()) {
+            try {
+                Future<MessageServiceOuterClass.ClientReply> f = cs.take();
+                MessageServiceOuterClass.ClientReply r = f.get();
+                if (isSuccess(r)) {
+                    winner = r;
+                    break;
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (ExecutionException e) {
+                // ignore and continue waiting
+            }
+        }
+
+        // Cancel stragglers once a winner is found
+        if (winner != null) {
+            done.set(true);
+            for (Future<?> f : futures) f.cancel(true);
+        }
+        return winner; // may be null if no server succeeded this round
     }
 
     private MessageServiceOuterClass.ClientReply broadcastRequest(MessageServiceOuterClass.ClientRequest request) {
@@ -177,7 +264,7 @@ public class Client {
                 }
             }
         } catch (Exception e) {
-            logger.error("Client {}: Error in spawning multiple threads for broadcast", clientId, e);
+//            logger.error("Client {}: Error in spawning multiple threads for broadcast", clientId, e);
         }
 
         return null;
@@ -196,10 +283,10 @@ public class Client {
         @Override
         public MessageServiceOuterClass.ClientReply call() throws Exception {
             try {
-                logger.info("Client {}: Broadcasting request ({}, {}, {}) to server {}.", clientId, request.getTransaction().getSender(), request.getTransaction().getReceiver(), request.getTransaction().getAmount(), serverId);
+//                logger.info("Client {}: Broadcasting request ({}, {}, {}) to server {}.", clientId, request.getTransaction().getSender(), request.getTransaction().getReceiver(), request.getTransaction().getAmount(), serverId);
                 return sendClientRequestWithTimeout(request, serverId);
             } catch (Exception e) {
-                logger.error("Client {}: Error broadcasting request to server {} : {}", clientId, serverId, e.getMessage());
+//                logger.error("Client {}: Error broadcasting request to server {} : {}", clientId, serverId, e.getMessage());
             }
             return null;
         }

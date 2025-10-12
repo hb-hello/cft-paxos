@@ -187,6 +187,8 @@ public class ServerNode {
                         transitionToCandidate();
                     }
                 });
+            } else {
+                executeAllCommittedInOrder();
             }
         }
     }
@@ -817,10 +819,10 @@ public class ServerNode {
     public MessageServiceOuterClass.AcceptedMessage handleAccept(MessageServiceOuterClass.AcceptMessage
                                                                          acceptMessage) {
 
-        if (state.isLeader() && requestTimer.isRunning()) {
-            logger.info("Live leader received ACCEPT message - ignoring");
-            return null;
-        }
+//        if (state.isLeader() && requestTimer.isRunning()) {
+//            logger.info("Live leader received ACCEPT message - ignoring");
+//            return null;
+//        }
 
         Ballot acceptBallot = Ballot.fromProtoBallot(acceptMessage.getBallot());
         long seqNum = acceptMessage.getSequenceNumber();
@@ -918,6 +920,12 @@ public class ServerNode {
                     return;
                 }
 
+                if (entry.isCommitted()) {
+                    logger.info("Entry at seq={} already committed, trying to execute", seqNum);
+                    executeAllCommittedInOrder();
+                    return;
+                }
+
                 int newVotes = log.incrementVotes(seqNum);
                 if (newVotes >= MAJORITY_COUNT) {
                     logger.info("Majority reached for seq={} - marking as committed", seqNum);
@@ -969,10 +977,10 @@ public class ServerNode {
         long seqNum = commitMessage.getSequenceNumber();
         Ballot commitBallot = Ballot.fromProtoBallot(commitMessage.getBallot());
 
-        if (state.isLeader() && requestTimer.isRunning()) {
-            logger.info("Live leader received COMMIT message - ignoring");
-            return;
-        }
+//        if (state.isLeader() && requestTimer.isRunning()) {
+//            logger.info("Live leader received COMMIT message - ignoring");
+//            return;
+//        }
 
         requestsAccepted.put(getRequestKey(commitMessage.getRequest()), seqNum);
 
@@ -981,6 +989,9 @@ public class ServerNode {
             LogEntry entry = log.getLogEntry(seqNum);
 
             if (commitBallot.isGreaterThanOrEqual(state.getBallot())) {
+
+                if (state.isLeader()) transitionToBackup(commitBallot.getServerId(), commitBallot);
+
                 if (entry == null) {
                     logger.warn("Received COMMIT for non-existent log entry at seq={}", seqNum);
                     // Add the entry from the commit message

@@ -8,11 +8,11 @@
       "receiver" : "E",
       "amount" : 4.0
     },
-    "timestamp" : "1760226899265",
+    "timestamp" : "1760239287135",
     "clientId" : "B"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -25,11 +25,11 @@
       "receiver" : "I",
       "amount" : 2.0
     },
-    "timestamp" : "1760226899264",
+    "timestamp" : "1760239287135",
     "clientId" : "H"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -42,11 +42,11 @@
       "receiver" : "D",
       "amount" : 1.0
     },
-    "timestamp" : "1760226899264",
+    "timestamp" : "1760239287134",
     "clientId" : "C"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -55,15 +55,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "A",
-      "receiver" : "J",
-      "amount" : 3.0
+      "sender" : "F",
+      "receiver" : "G",
+      "amount" : 2.0
     },
-    "timestamp" : "1760226899264",
-    "clientId" : "A"
+    "timestamp" : "1760239287135",
+    "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -72,15 +72,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "F",
-      "receiver" : "G",
-      "amount" : 2.0
+      "sender" : "A",
+      "receiver" : "J",
+      "amount" : 3.0
     },
-    "timestamp" : "1760226899265",
-    "clientId" : "F"
+    "timestamp" : "1760239287134",
+    "clientId" : "A"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -89,15 +89,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "B",
-      "receiver" : "I",
-      "amount" : 2.0
+      "sender" : "J",
+      "receiver" : "C",
+      "amount" : 4.0
     },
-    "timestamp" : "1760226904873",
-    "clientId" : "B"
+    "timestamp" : "1760239289743",
+    "clientId" : "J"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -106,37 +106,20 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "J",
-      "receiver" : "C",
-      "amount" : 4.0
+      "sender" : "B",
+      "receiver" : "I",
+      "amount" : 2.0
     },
-    "timestamp" : "1760226904873",
-    "clientId" : "J"
+    "timestamp" : "1760239289743",
+    "clientId" : "B"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
   "sequenceNumber" : 8,
-  "acceptedVotes" : 2,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "C",
-      "receiver" : "A",
-      "amount" : 2.0
-    },
-    "timestamp" : "1760226909194",
-    "clientId" : "C"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 9,
-  "acceptedVotes" : 2,
+  "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
@@ -144,11 +127,28 @@
       "receiver" : "F",
       "amount" : 3.0
     },
-    "timestamp" : "1760226909193",
+    "timestamp" : "1760239293262",
     "clientId" : "B"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
+    "senderId" : "n4"
+  }
+}, {
+  "sequenceNumber" : 9,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "C",
+      "receiver" : "A",
+      "amount" : 2.0
+    },
+    "timestamp" : "1760239293262",
+    "clientId" : "C"
+  },
+  "ballot" : {
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -161,11 +161,11 @@
       "receiver" : "F",
       "amount" : 3.0
     },
-    "timestamp" : "1760226914019",
+    "timestamp" : "1760239294988",
     "clientId" : "B"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -178,11 +178,11 @@
       "receiver" : "H",
       "amount" : 3.0
     },
-    "timestamp" : "1760226914020",
+    "timestamp" : "1760239294988",
     "clientId" : "A"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -191,15 +191,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "D",
-      "receiver" : "F",
-      "amount" : 2.0
+      "sender" : "C",
+      "receiver" : "B",
+      "amount" : 1.0
     },
-    "timestamp" : "1760227002175",
-    "clientId" : "D"
+    "timestamp" : "1760239297464",
+    "clientId" : "C"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -208,15 +208,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "C",
-      "receiver" : "B",
-      "amount" : 1.0
+      "sender" : "D",
+      "receiver" : "F",
+      "amount" : 2.0
     },
-    "timestamp" : "1760227002175",
-    "clientId" : "C"
+    "timestamp" : "1760239297465",
+    "clientId" : "D"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -229,11 +229,11 @@
       "receiver" : "B",
       "amount" : 4.0
     },
-    "timestamp" : "1760227009223",
+    "timestamp" : "1760239302137",
     "clientId" : "A"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -242,15 +242,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "E",
-      "receiver" : "J",
+      "sender" : "I",
+      "receiver" : "D",
       "amount" : 2.0
     },
-    "timestamp" : "1760227010044",
-    "clientId" : "E"
+    "timestamp" : "1760239302137",
+    "clientId" : "I"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -259,15 +259,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "I",
-      "receiver" : "D",
+      "sender" : "E",
+      "receiver" : "J",
       "amount" : 2.0
     },
-    "timestamp" : "1760227010044",
-    "clientId" : "I"
+    "timestamp" : "1760239302137",
+    "clientId" : "E"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -276,15 +276,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "F",
+      "sender" : "J",
       "receiver" : "A",
       "amount" : 2.0
     },
-    "timestamp" : "1760227020686",
-    "clientId" : "F"
+    "timestamp" : "1760239305470",
+    "clientId" : "J"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -293,15 +293,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "J",
+      "sender" : "F",
       "receiver" : "A",
       "amount" : 2.0
     },
-    "timestamp" : "1760227020687",
-    "clientId" : "J"
+    "timestamp" : "1760239305469",
+    "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -314,11 +314,11 @@
       "receiver" : "H",
       "amount" : 1.0
     },
-    "timestamp" : "1760227020687",
+    "timestamp" : "1760239305470",
     "clientId" : "G"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -327,15 +327,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "E",
-      "receiver" : "A",
-      "amount" : 3.0
+      "sender" : "J",
+      "receiver" : "B",
+      "amount" : 1.0
     },
-    "timestamp" : "1760227024399",
-    "clientId" : "E"
+    "timestamp" : "1760239310685",
+    "clientId" : "J"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -348,11 +348,11 @@
       "receiver" : "D",
       "amount" : 2.0
     },
-    "timestamp" : "1760227024400",
+    "timestamp" : "1760239310684",
     "clientId" : "C"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -365,11 +365,11 @@
       "receiver" : "H",
       "amount" : 2.0
     },
-    "timestamp" : "1760227024400",
+    "timestamp" : "1760239310684",
     "clientId" : "G"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -382,11 +382,11 @@
       "receiver" : "B",
       "amount" : 2.0
     },
-    "timestamp" : "1760227024400",
+    "timestamp" : "1760239310684",
     "clientId" : "I"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -395,15 +395,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "J",
-      "receiver" : "B",
-      "amount" : 1.0
+      "sender" : "F",
+      "receiver" : "A",
+      "amount" : 2.0
     },
-    "timestamp" : "1760227025205",
-    "clientId" : "J"
+    "timestamp" : "1760239310684",
+    "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -412,15 +412,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "F",
+      "sender" : "E",
       "receiver" : "A",
-      "amount" : 2.0
+      "amount" : 3.0
     },
-    "timestamp" : "1760227025204",
-    "clientId" : "F"
+    "timestamp" : "1760239310684",
+    "clientId" : "E"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -433,28 +433,28 @@
       "receiver" : "J",
       "amount" : 1.0
     },
-    "timestamp" : "1760227041619",
+    "timestamp" : "1760239314251",
     "clientId" : "A"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
   "sequenceNumber" : 27,
-  "acceptedVotes" : 0,
+  "acceptedVotes" : 2,
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "C",
-      "receiver" : "H",
-      "amount" : 3.0
+      "sender" : "E",
+      "receiver" : "D",
+      "amount" : 1.0
     },
-    "timestamp" : "1760227040001",
-    "clientId" : "C"
+    "timestamp" : "1760239314977",
+    "clientId" : "E"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -463,15 +463,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "E",
-      "receiver" : "D",
-      "amount" : 1.0
+      "sender" : "C",
+      "receiver" : "H",
+      "amount" : 3.0
     },
-    "timestamp" : "1760227040811",
-    "clientId" : "E"
+    "timestamp" : "1760239314950",
+    "clientId" : "C"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -484,11 +484,11 @@
       "receiver" : "I",
       "amount" : 2.0
     },
-    "timestamp" : "1760227040811",
+    "timestamp" : "1760239314959",
     "clientId" : "G"
   },
   "ballot" : {
-    "instance" : 62,
+    "instance" : 30,
     "senderId" : "n4"
   }
 }, {
@@ -497,16 +497,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "E",
-      "receiver" : "F",
+      "sender" : "I",
+      "receiver" : "J",
       "amount" : 1.0
     },
-    "timestamp" : "1760227075734",
-    "clientId" : "E"
+    "timestamp" : "1760239317603",
+    "clientId" : "I"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 31,
@@ -514,16 +514,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "B",
-      "receiver" : "C",
+      "sender" : "F",
+      "receiver" : "G",
       "amount" : 1.0
     },
-    "timestamp" : "1760227075734",
-    "clientId" : "B"
+    "timestamp" : "1760239317603",
+    "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 32,
@@ -531,16 +531,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "C",
-      "receiver" : "D",
+      "sender" : "J",
+      "receiver" : "A",
       "amount" : 1.0
     },
-    "timestamp" : "1760227075734",
-    "clientId" : "C"
+    "timestamp" : "1760239317603",
+    "clientId" : "J"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 33,
@@ -552,32 +552,15 @@
       "receiver" : "I",
       "amount" : 1.0
     },
-    "timestamp" : "1760227075734",
+    "timestamp" : "1760239317603",
     "clientId" : "H"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 34,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "D",
-      "receiver" : "E",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227075733",
-    "clientId" : "D"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 35,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -586,49 +569,15 @@
       "receiver" : "J",
       "amount" : 1.0
     },
-    "timestamp" : "1760227075734",
+    "timestamp" : "1760239317668",
     "clientId" : "I"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
-  "sequenceNumber" : 36,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "G",
-      "receiver" : "H",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227075734",
-    "clientId" : "G"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 37,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "J",
-      "receiver" : "A",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227075734",
-    "clientId" : "J"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 38,
+  "sequenceNumber" : 35,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -637,12 +586,63 @@
       "receiver" : "G",
       "amount" : 1.0
     },
-    "timestamp" : "1760227075734",
+    "timestamp" : "1760239317669",
     "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
+  }
+}, {
+  "sequenceNumber" : 36,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "J",
+      "receiver" : "A",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239317673",
+    "clientId" : "J"
+  },
+  "ballot" : {
+    "instance" : 31,
+    "senderId" : "n2"
+  }
+}, {
+  "sequenceNumber" : 37,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "H",
+      "receiver" : "I",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239317689",
+    "clientId" : "H"
+  },
+  "ballot" : {
+    "instance" : 31,
+    "senderId" : "n2"
+  }
+}, {
+  "sequenceNumber" : 38,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "I",
+      "receiver" : "J",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239317786",
+    "clientId" : "I"
+  },
+  "ballot" : {
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 39,
@@ -650,16 +650,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "A",
-      "receiver" : "B",
+      "sender" : "F",
+      "receiver" : "G",
       "amount" : 1.0
     },
-    "timestamp" : "1760227075733",
-    "clientId" : "A"
+    "timestamp" : "1760239317796",
+    "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 40,
@@ -667,16 +667,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "B",
-      "receiver" : "C",
+      "sender" : "J",
+      "receiver" : "A",
       "amount" : 1.0
     },
-    "timestamp" : "1760227076998",
-    "clientId" : "B"
+    "timestamp" : "1760239317814",
+    "clientId" : "J"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 41,
@@ -688,32 +688,15 @@
       "receiver" : "I",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077006",
+    "timestamp" : "1760239317820",
     "clientId" : "H"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
   "sequenceNumber" : 42,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "C",
-      "receiver" : "D",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077007",
-    "clientId" : "C"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 43,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -722,32 +705,15 @@
       "receiver" : "J",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077066",
+    "timestamp" : "1760239317903",
     "clientId" : "I"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
-  "sequenceNumber" : 44,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "D",
-      "receiver" : "E",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077066",
-    "clientId" : "D"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 45,
+  "sequenceNumber" : 43,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -756,49 +722,15 @@
       "receiver" : "G",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077083",
+    "timestamp" : "1760239317914",
     "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
-  "sequenceNumber" : 46,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "A",
-      "receiver" : "B",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077106",
-    "clientId" : "A"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 47,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "B",
-      "receiver" : "C",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077177",
-    "clientId" : "B"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 48,
+  "sequenceNumber" : 44,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -807,32 +739,32 @@
       "receiver" : "I",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077215",
+    "timestamp" : "1760239317963",
     "clientId" : "H"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
-  "sequenceNumber" : 49,
+  "sequenceNumber" : 45,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "C",
-      "receiver" : "D",
+      "sender" : "J",
+      "receiver" : "A",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077223",
-    "clientId" : "C"
+    "timestamp" : "1760239317967",
+    "clientId" : "J"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
-  "sequenceNumber" : 50,
+  "sequenceNumber" : 46,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -841,15 +773,15 @@
       "receiver" : "J",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077267",
+    "timestamp" : "1760239318030",
     "clientId" : "I"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 31,
+    "senderId" : "n2"
   }
 }, {
-  "sequenceNumber" : 51,
+  "sequenceNumber" : 47,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -858,12 +790,80 @@
       "receiver" : "F",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077300",
+    "timestamp" : "1760239317603",
     "clientId" : "E"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 48,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "A",
+      "receiver" : "B",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239317603",
+    "clientId" : "A"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 49,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "B",
+      "receiver" : "C",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239317603",
+    "clientId" : "B"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 50,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "C",
+      "receiver" : "D",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239317603",
+    "clientId" : "C"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 51,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "D",
+      "receiver" : "E",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239317603",
+    "clientId" : "D"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 52,
@@ -875,12 +875,12 @@
       "receiver" : "H",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077334",
+    "timestamp" : "1760239317603",
     "clientId" : "G"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 53,
@@ -888,53 +888,19 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "J",
-      "receiver" : "A",
+      "sender" : "G",
+      "receiver" : "H",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077336",
-    "clientId" : "J"
+    "timestamp" : "1760239320438",
+    "clientId" : "G"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 54,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "A",
-      "receiver" : "B",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077421",
-    "clientId" : "A"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 55,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "H",
-      "receiver" : "I",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077424",
-    "clientId" : "H"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 56,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -943,12 +909,46 @@
       "receiver" : "D",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077428",
+    "timestamp" : "1760239319937",
     "clientId" : "C"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 55,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "D",
+      "receiver" : "E",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239319943",
+    "clientId" : "D"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 56,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "A",
+      "receiver" : "B",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239319946",
+    "clientId" : "A"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 57,
@@ -960,12 +960,12 @@
       "receiver" : "F",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077450",
+    "timestamp" : "1760239319945",
     "clientId" : "E"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 58,
@@ -973,19 +973,36 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "B",
-      "receiver" : "C",
+      "sender" : "G",
+      "receiver" : "H",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077423",
-    "clientId" : "B"
+    "timestamp" : "1760239320535",
+    "clientId" : "G"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 59,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "C",
+      "receiver" : "D",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239320550",
+    "clientId" : "C"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 60,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -994,49 +1011,15 @@
       "receiver" : "E",
       "amount" : 1.0
     },
-    "timestamp" : "1760227077402",
+    "timestamp" : "1760239320570",
     "clientId" : "D"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 60,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "F",
-      "receiver" : "G",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077415",
-    "clientId" : "F"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 61,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "I",
-      "receiver" : "J",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227077444",
-    "clientId" : "I"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 62,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -1045,12 +1028,29 @@
       "receiver" : "B",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078341",
+    "timestamp" : "1760239320596",
     "clientId" : "A"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 62,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "E",
+      "receiver" : "F",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239320618",
+    "clientId" : "E"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 63,
@@ -1058,16 +1058,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "H",
-      "receiver" : "I",
+      "sender" : "G",
+      "receiver" : "H",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078350",
-    "clientId" : "H"
+    "timestamp" : "1760239320711",
+    "clientId" : "G"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 64,
@@ -1079,66 +1079,15 @@
       "receiver" : "D",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078352",
+    "timestamp" : "1760239320732",
     "clientId" : "C"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 65,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "E",
-      "receiver" : "F",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227078354",
-    "clientId" : "E"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 66,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "J",
-      "receiver" : "A",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227078357",
-    "clientId" : "J"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 67,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "D",
-      "receiver" : "E",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227078367",
-    "clientId" : "D"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 68,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -1147,66 +1096,32 @@
       "receiver" : "G",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078369",
+    "timestamp" : "1760239320236",
     "clientId" : "F"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
-  "sequenceNumber" : 69,
+  "sequenceNumber" : 66,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "I",
-      "receiver" : "J",
+      "sender" : "D",
+      "receiver" : "E",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078369",
-    "clientId" : "I"
+    "timestamp" : "1760239320754",
+    "clientId" : "D"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
-  "sequenceNumber" : 70,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "B",
-      "receiver" : "C",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227078366",
-    "clientId" : "B"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 71,
-  "acceptedVotes" : 0,
-  "status" : "EXECUTED",
-  "request" : {
-    "transaction" : {
-      "sender" : "G",
-      "receiver" : "H",
-      "amount" : 1.0
-    },
-    "timestamp" : "1760227078502",
-    "clientId" : "G"
-  },
-  "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
-  }
-}, {
-  "sequenceNumber" : 72,
+  "sequenceNumber" : 67,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -1215,15 +1130,32 @@
       "receiver" : "B",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078468",
+    "timestamp" : "1760239320771",
     "clientId" : "A"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
-  "sequenceNumber" : 73,
+  "sequenceNumber" : 68,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "H",
+      "receiver" : "I",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239320281",
+    "clientId" : "H"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 69,
   "acceptedVotes" : 0,
   "status" : "EXECUTED",
   "request" : {
@@ -1232,12 +1164,80 @@
       "receiver" : "F",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078585",
+    "timestamp" : "1760239320787",
     "clientId" : "E"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 70,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "J",
+      "receiver" : "A",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239320288",
+    "clientId" : "J"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 71,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "B",
+      "receiver" : "C",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239320431",
+    "clientId" : "B"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 72,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "G",
+      "receiver" : "H",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239320963",
+    "clientId" : "G"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
+  }
+}, {
+  "sequenceNumber" : 73,
+  "acceptedVotes" : 0,
+  "status" : "EXECUTED",
+  "request" : {
+    "transaction" : {
+      "sender" : "C",
+      "receiver" : "D",
+      "amount" : 1.0
+    },
+    "timestamp" : "1760239320983",
+    "clientId" : "C"
+  },
+  "ballot" : {
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 74,
@@ -1249,12 +1249,12 @@
       "receiver" : "E",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078605",
+    "timestamp" : "1760239321027",
     "clientId" : "D"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 75,
@@ -1262,16 +1262,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "F",
-      "receiver" : "G",
+      "sender" : "A",
+      "receiver" : "B",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078638",
-    "clientId" : "F"
+    "timestamp" : "1760239321045",
+    "clientId" : "A"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 76,
@@ -1279,16 +1279,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "G",
-      "receiver" : "H",
+      "sender" : "E",
+      "receiver" : "F",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078655",
-    "clientId" : "G"
+    "timestamp" : "1760239321084",
+    "clientId" : "E"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 77,
@@ -1296,16 +1296,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "J",
-      "receiver" : "A",
+      "sender" : "B",
+      "receiver" : "C",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078652",
-    "clientId" : "J"
+    "timestamp" : "1760239321258",
+    "clientId" : "B"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 78,
@@ -1313,16 +1313,16 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "J",
-      "receiver" : "A",
+      "sender" : "B",
+      "receiver" : "C",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078826",
-    "clientId" : "J"
+    "timestamp" : "1760239321445",
+    "clientId" : "B"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 }, {
   "sequenceNumber" : 79,
@@ -1330,15 +1330,15 @@
   "status" : "EXECUTED",
   "request" : {
     "transaction" : {
-      "sender" : "G",
-      "receiver" : "H",
+      "sender" : "B",
+      "receiver" : "C",
       "amount" : 1.0
     },
-    "timestamp" : "1760227078826",
-    "clientId" : "G"
+    "timestamp" : "1760239321491",
+    "clientId" : "B"
   },
   "ballot" : {
-    "instance" : 62,
-    "senderId" : "n4"
+    "instance" : 34,
+    "senderId" : "n5"
   }
 } ]

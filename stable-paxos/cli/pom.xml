@@ -39,7 +39,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.InteractiveCLI</mainClass>
+                            <mainClass>org.example.PaxosCLI</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
